@@ -15,6 +15,7 @@ import { useAuth } from "../hooks/useAuth";
 import { uploadFile } from "../utils/storage";
 import { authFetch } from "../services/api";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -34,18 +35,19 @@ export default function ProfilePage() {
 
     try {
       const res = await authFetch("/api/users/me");
-      
+
       if (!res.ok) throw new Error("Failed to fetch profile");
 
       const data = await res.json();
 
       setProfile({
         ...data,
-        skills: typeof data.skills === "string" 
-          ? data.skills 
-          : Array.isArray(data.skills)
-          ? data.skills.join(", ")
-          : "",
+        skills:
+          typeof data.skills === "string"
+            ? data.skills
+            : Array.isArray(data.skills)
+            ? data.skills.join(", ")
+            : "",
       });
 
       setImagePreview(data.image_url || "");
@@ -60,9 +62,9 @@ export default function ProfilePage() {
   const fetchMyHires = useCallback(async () => {
     try {
       const res = await authFetch("/api/hires/my/jobs");
-      
+
       if (!res.ok) throw new Error("Failed to fetch hires");
-      
+
       const data = await res.json();
       setMyHires(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -75,9 +77,9 @@ export default function ProfilePage() {
   const fetchMyWork = useCallback(async () => {
     try {
       const res = await authFetch("/api/hires/my/work");
-      
+
       if (!res.ok) throw new Error("Failed to fetch work");
-      
+
       const data = await res.json();
       setMyWork(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -137,13 +139,14 @@ export default function ProfilePage() {
       const updated = await res.json();
       setProfile({
         ...updated,
-        skills: typeof updated.skills === "string"
-          ? updated.skills
-          : Array.isArray(updated.skills)
-          ? updated.skills.join(", ")
-          : "",
+        skills:
+          typeof updated.skills === "string"
+            ? updated.skills
+            : Array.isArray(updated.skills)
+            ? updated.skills.join(", ")
+            : "",
       });
-      
+
       setShowEdit(false);
       alert("Profile updated successfully!");
     } catch (err) {
@@ -185,24 +188,25 @@ export default function ProfilePage() {
                 className="rounded-circle mb-3"
                 style={{ objectFit: "cover" }}
               />
-              
-              <h4 className="mb-1">{profile.name || user?.displayName || "User"}</h4>
-              
+
+              <h4 className="mb-1">
+                {profile.name || user?.displayName || "User"}
+              </h4>
+
               {profile.email && (
                 <p className="text-muted small mb-2">{profile.email}</p>
               )}
 
               {profile.skills && (
                 <div className="mb-3">
-                  {profile.skills.split(",").slice(0, 3).map((skill, idx) => (
-                    <Badge 
-                      key={idx} 
-                      bg="primary" 
-                      className="me-1 mb-1"
-                    >
-                      {skill.trim()}
-                    </Badge>
-                  ))}
+                  {profile.skills
+                    .split(",")
+                    .slice(0, 3)
+                    .map((skill, idx) => (
+                      <Badge key={idx} bg="primary" className="me-1 mb-1">
+                        {skill.trim()}
+                      </Badge>
+                    ))}
                 </div>
               )}
 
@@ -210,12 +214,20 @@ export default function ProfilePage() {
                 <p className="text-muted small mb-3">{profile.bio}</p>
               )}
 
-              <Button 
-                variant="primary" 
+              <Button
+                variant="primary"
                 onClick={() => setShowEdit(true)}
                 className="w-100"
               >
                 Edit Profile
+              </Button>
+              <Button
+                as={Link}
+                to="/settings/payment"
+                variant="primary"
+                className="w-100"
+              >
+                Payment Settings
               </Button>
             </Card.Body>
           </Card>
@@ -247,7 +259,7 @@ export default function ProfilePage() {
                             </div>
                           </div>
                           <div>
-                            <Badge 
+                            <Badge
                               bg={hire.paid ? "success" : "warning"}
                               className="mb-1"
                             >
@@ -255,8 +267,8 @@ export default function ProfilePage() {
                             </Badge>
                             {!hire.paid && hire.amount > 0 && (
                               <div>
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   variant="outline-primary"
                                   onClick={() => handlePay(hire.hire_id)}
                                 >
@@ -316,7 +328,7 @@ export default function ProfilePage() {
         <Modal.Header closeButton>
           <Modal.Title>Edit Profile</Modal.Title>
         </Modal.Header>
-        
+
         <Modal.Body>
           <Form>
             <div className="text-center mb-3">
@@ -374,16 +386,16 @@ export default function ProfilePage() {
         </Modal.Body>
 
         <Modal.Footer>
-          <Button 
-            variant="secondary" 
+          <Button
+            variant="secondary"
             onClick={() => setShowEdit(false)}
             disabled={uploading}
           >
             Cancel
           </Button>
-          <Button 
-            variant="primary" 
-            onClick={handleSaveProfile} 
+          <Button
+            variant="primary"
+            onClick={handleSaveProfile}
             disabled={uploading}
           >
             {uploading ? (

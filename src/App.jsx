@@ -11,7 +11,8 @@ import ProfilePage from "./pages/ProfilePage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
-
+import StripeOnboardingPage from "./pages/StripeOnboardingPage";
+import PrivacyPolicy from "./pages/PrivacyPolicy"; // <-- import PrivacyPolicy page
 
 function Layout({ children }) {
   const location = useLocation();
@@ -53,6 +54,10 @@ export default function App() {
             }
           />
 
+          <Route 
+            path="/settings/payment" 
+            element={<StripeOnboardingPage />} />
+
           <Route
             path="/profile"
             element={
@@ -73,6 +78,9 @@ export default function App() {
 
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+
+          {/* Privacy Policy Route */}
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         </Routes>
       </Layout>
     </BrowserRouter>
