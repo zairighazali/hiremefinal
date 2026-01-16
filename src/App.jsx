@@ -1,0 +1,80 @@
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+
+import HomePage from "./pages/HomePage";
+import JobsPage from "./pages/JobsPage";
+import FreelancersProfilePage from "./pages/FreelancersProfilePage";
+import MessagePage from "./pages/MessagePage";
+import PaymentPage from "./pages/PaymentPage";
+import ProfilePage from "./pages/ProfilePage";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+
+function Layout({ children }) {
+  const location = useLocation();
+  const hideLayout =
+    location.pathname === "/login" || location.pathname === "/register";
+
+  return (
+    <>
+      {!hideLayout && <Navbar />}
+      {children}
+      {!hideLayout && <Footer />}
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/jobs" element={<JobsPage />} />
+         
+          <Route
+            path="/messages/:conversationId?"
+            element={
+              <ProtectedRoute>
+                <MessagePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/payment"
+            element={
+              <ProtectedRoute>
+                <PaymentPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/freelancer/:uid"
+            element={
+              <ProtectedRoute>
+                <FreelancersProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
+  );
+}
