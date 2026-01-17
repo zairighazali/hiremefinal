@@ -1,7 +1,8 @@
 import { io } from "socket.io-client";
 import { auth } from "../../firebase";
 
-const SOCKET_URL = "https://41bbbbbf-93d5-4a52-aef1-e65635945258-00-3tcqp4xlzxntf.pike.replit.dev";
+const SOCKET_URL = "https://ministers-gardening-align-furnishings.trycloudflare.com"
+//"https://41bbbbbf-93d5-4a52-aef1-e65635945258-00-3tcqp4xlzxntf.pike.replit.dev";
 
 let socket;
 

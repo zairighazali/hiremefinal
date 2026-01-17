@@ -1,6 +1,6 @@
 import { auth } from "../../firebase";
 
-const API_BASE_URL = "https://41bbbbbf-93d5-4a52-aef1-e65635945258-00-3tcqp4xlzxntf.pike.replit.dev";
+const API_BASE_URL = "https://ministers-gardening-align-furnishings.trycloudflare.com";
 
 export async function authFetch(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...options.headers };
@@ -21,3 +21,6 @@ export async function authFetch(path, options = {}) {
     headers,
   });
 }
+
+//"ministers-gardening-align-furnishings.trycloudflare.com"
+//"https://41bbbbbf-93d5-4a52-aef1-e65635945258-00-3tcqp4xlzxntf.pike.replit.dev";

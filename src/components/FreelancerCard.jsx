@@ -1,25 +1,28 @@
 import { Card, Button, Badge } from "react-bootstrap";
 import { Link } from "react-router-dom";
-import '../App.css';
+import "../App.css";
 
 export default function FreelancerCard({ freelancer }) {
   return (
     <Card className="freelancer-card text-center border-0">
       {/* IMAGE */}
-      <div className="freelancer-img-wrapper">
+      <div className="freelancer-img-wrapper position-relative">
         <img
           src={freelancer.image_url || "https://via.placeholder.com/300"}
           alt={freelancer.name}
           className="freelancer-img"
         />
+
+        {/* BADGE (manual from DB) */}
+        {freelancer.is_best_hired && (
+          <div className="ribbon ribbon-top-right">
+    <span>💎 Verified Pro</span>
+  </div>
+        )}
       </div>
 
       <Card.Body className="py-3 px-3">
         <h6 className="fw-bold mb-1">{freelancer.name}</h6>
-
-        <p className="text-muted small mb-2">
-          {freelancer.bio || "Freelancer"}
-        </p>
 
         {/* SKILLS */}
         {freelancer.skills && (

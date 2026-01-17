@@ -1,4 +1,3 @@
-// src/pages/MessagePage.jsx - FIXED
 import {
   Container,
   Row,
@@ -8,12 +7,15 @@ import {
   Button,
   Card,
   Spinner,
+  Badge,
+  Toast,
+  ToastContainer,
 } from "react-bootstrap";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { authFetch } from "../services/api";
-import { initSocket } from "../services/socket";
 import { useAuth } from "../hooks/useAuth";
+import { getDatabase, ref, onValue, push, set, get, off } from "firebase/database";
 
 export default function MessagePage() {
   const { user } = useAuth();
@@ -26,51 +28,94 @@ export default function MessagePage() {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState({});
+  const [notifications, setNotifications] = useState([]);
   
   const messagesEndRef = useRef(null);
-  const socketRef = useRef(null);
+  const audioRef = useRef(null);
 
   // Scroll to bottom
   const scrollToBottom = () =>
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 
-  // Initialize socket
-  useEffect(() => {
-    const setupSocket = async () => {
-      try {
-        const socket = await initSocket();
-        socketRef.current = socket;
-
-        socket.on("receive_message", (data) => {
-          console.log("Received message:", data);
-          
-          // Check if message belongs to active conversation
-          if (data.message?.conversation_id === activeConv?.conversation_id) {
-            setMessages((prev) => [...prev, data.message]);
-          }
-          
-          // Refresh conversation list to show latest message
-          fetchConversations();
-        });
-
-        return () => {
-          socket.off("receive_message");
-        };
-      } catch (err) {
-        console.error("Socket setup error:", err);
-      }
-    };
-
-    if (user) {
-      setupSocket();
+  // Play notification sound
+  const playNotificationSound = () => {
+    if (audioRef.current) {
+      audioRef.current.play().catch(e => console.log("Audio play failed:", e));
     }
+  };
+
+  // Initialize Firebase listeners
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const db = getDatabase();
+
+    // Listen for new notifications
+    const notificationsRef = ref(db, `notifications/${user.uid}`);
+    const unsubscribeNotifications = onValue(notificationsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const notifArray = Object.entries(data).map(([key, val]) => ({
+          id: key,
+          ...val,
+        }));
+        
+        // Show only unread notifications
+        const unread = notifArray.filter(n => !n.read);
+        setNotifications(unread);
+        
+        // Play sound for new messages
+        if (unread.length > 0) {
+          playNotificationSound();
+        }
+      }
+    });
+
+    // Listen for unread counts
+    const unreadRef = ref(db, `unread/${user.uid}`);
+    const unsubscribeUnread = onValue(unreadRef, (snapshot) => {
+      const data = snapshot.val();
+      setUnreadCounts(data || {});
+    });
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.off("receive_message");
-      }
+      off(notificationsRef);
+      off(unreadRef);
     };
-  }, [user, activeConv?.conversation_id]);
+  }, [user?.uid]);
+
+  // Listen for real-time messages in active conversation
+  useEffect(() => {
+    if (!activeConv?.id || !user?.uid) return;
+
+    const db = getDatabase();
+    const messagesRef = ref(db, `messages/${activeConv.id}`);
+    
+    const unsubscribe = onValue(messagesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const msgArray = Object.values(data)
+          .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        
+        // Update messages state
+        setMessages(msgArray.map(msg => ({
+          id: msg.id,
+          chat_id: msg.chatId,
+          sender_uid: msg.senderUid,
+          content: msg.content,
+          created_at: msg.createdAt,
+        })));
+      }
+    });
+
+    // Mark as read when opening conversation
+    markAsRead(activeConv.id);
+
+    return () => {
+      off(messagesRef);
+    };
+  }, [activeConv?.id, user?.uid]);
 
   // Fetch conversations list
   const fetchConversations = async () => {
@@ -116,11 +161,39 @@ export default function MessagePage() {
       
       const data = await res.json();
       setMessages(Array.isArray(data) ? data : []);
+      
+      // Mark as read
+      await markAsRead(conv.conversation_id);
     } catch (err) {
       console.error("Failed to fetch messages:", err);
       setMessages([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Mark conversation as read
+  const markAsRead = async (chatId) => {
+    try {
+      await authFetch(`/api/chats/${chatId}/read`, {
+        method: "POST",
+      });
+      
+      // Clear notifications for this chat
+      const db = getDatabase();
+      const notificationsRef = ref(db, `notifications/${user.uid}`);
+      const snapshot = await get(notificationsRef);
+      const data = snapshot.val();
+      
+      if (data) {
+        Object.entries(data).forEach(([key, val]) => {
+          if (val.chatId === chatId) {
+            set(ref(db, `notifications/${user.uid}/${key}`), null);
+          }
+        });
+      }
+    } catch (err) {
+      console.error("Failed to mark as read:", err);
     }
   };
 
@@ -132,7 +205,7 @@ export default function MessagePage() {
 
     setSending(true);
     const messageText = text.trim();
-    setText(""); // Clear input immediately for better UX
+    setText("");
 
     try {
       const res = await authFetch(
@@ -145,33 +218,64 @@ export default function MessagePage() {
 
       if (!res.ok) throw new Error("Failed to send message");
 
-      const newMessage = await res.json();
-      
-      // Add message to local state
-      setMessages((prev) => [...prev, newMessage]);
-      
-      // Socket will emit to receiver automatically from backend
+      // Message will appear via Firebase listener
     } catch (err) {
       console.error("Failed to send message:", err);
       alert("Failed to send message: " + err.message);
-      setText(messageText); // Restore text on error
+      setText(messageText);
     } finally {
       setSending(false);
     }
+  };
+
+  // Dismiss notification
+  const dismissNotification = (notifId) => {
+    setNotifications(prev => prev.filter(n => n.id !== notifId));
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  // Get total unread count
+  const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
+
   return (
     <Container fluid className="mt-4" style={{ height: "85vh" }}>
+      {/* Notification Sound */}
+      <audio ref={audioRef} src="/notification.mp3" preload="auto" />
+      
+      {/* Notification Toasts */}
+      <ToastContainer position="top-end" className="p-3" style={{ zIndex: 9999 }}>
+        {notifications.slice(0, 3).map((notif) => (
+          <Toast
+            key={notif.id}
+            onClose={() => dismissNotification(notif.id)}
+            delay={5000}
+            autohide
+          >
+            <Toast.Header>
+              <strong className="me-auto">New Message</strong>
+              <small>just now</small>
+            </Toast.Header>
+            <Toast.Body>{notif.content}</Toast.Body>
+          </Toast>
+        ))}
+      </ToastContainer>
+
       <Row className="g-3 h-100">
         {/* Conversations list */}
         <Col md={4} className="h-100">
           <Card className="h-100 d-flex flex-column">
             <Card.Header className="d-flex justify-content-between align-items-center">
-              <span>Conversations</span>
+              <span>
+                Conversations
+                {totalUnread > 0 && (
+                  <Badge bg="danger" className="ms-2">
+                    {totalUnread}
+                  </Badge>
+                )}
+              </span>
               <Button 
                 size="sm" 
                 variant="outline-primary"
@@ -187,38 +291,49 @@ export default function MessagePage() {
                     No conversations yet
                   </ListGroup.Item>
                 )}
-                {conversations.map((conv) => (
-                  <ListGroup.Item
-                    key={conv.conversation_id}
-                    action
-                    active={
-                      activeConv?.conversation_id === conv.conversation_id
-                    }
-                    onClick={() => openConversation(conv)}
-                    className="d-flex align-items-center gap-2"
-                  >
-                    <img
-                      src={
-                        conv.other_user_image ||
-                        "https://via.placeholder.com/40"
+                {conversations.map((conv) => {
+                  const unreadCount = unreadCounts[conv.conversation_id] || 0;
+                  
+                  return (
+                    <ListGroup.Item
+                      key={conv.conversation_id}
+                      action
+                      active={
+                        activeConv?.conversation_id === conv.conversation_id
                       }
-                      width={40}
-                      height={40}
-                      className="rounded-circle"
-                      alt={conv.other_user_name}
-                    />
-                    <div className="flex-grow-1">
-                      <div className="fw-bold">
-                        {conv.other_user_name || "Unknown User"}
-                      </div>
-                      {conv.last_message && (
-                        <div className="small text-muted text-truncate">
-                          {conv.last_message}
+                      onClick={() => openConversation(conv)}
+                      className="d-flex align-items-center gap-2"
+                    >
+                      <img
+                        src={
+                          conv.other_user_image ||
+                          "https://via.placeholder.com/40"
+                        }
+                        width={40}
+                        height={40}
+                        className="rounded-circle"
+                        alt={conv.other_user_name}
+                      />
+                      <div className="flex-grow-1">
+                        <div className="d-flex justify-content-between align-items-center">
+                          <div className="fw-bold">
+                            {conv.other_user_name || "Unknown User"}
+                          </div>
+                          {unreadCount > 0 && (
+                            <Badge bg="danger" pill>
+                              {unreadCount}
+                            </Badge>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </ListGroup.Item>
-                ))}
+                        {conv.last_message && (
+                          <div className="small text-muted text-truncate">
+                            {conv.last_message}
+                          </div>
+                        )}
+                      </div>
+                    </ListGroup.Item>
+                  );
+                })}
               </ListGroup>
             </div>
           </Card>
