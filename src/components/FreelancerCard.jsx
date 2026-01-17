@@ -17,9 +17,9 @@ export default function FreelancerCard({ freelancer }) {
       <Card.Body className="py-3 px-3">
         <h6 className="fw-bold mb-1">{freelancer.name}</h6>
 
-        <p className="text-muted small mb-2">
+        {/* <p className="text-muted small mb-2">
           {freelancer.bio || "Freelancer"}
-        </p>
+        </p> */}
 
         {/* SKILLS */}
         {freelancer.skills && (
