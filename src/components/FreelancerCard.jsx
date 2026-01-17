@@ -12,6 +12,11 @@ export default function FreelancerCard({ freelancer }) {
           alt={freelancer.name}
           className="freelancer-img"
         />
+        {freelancer.is_best_hired && (
+          <div className="ribbon ribbon-top-right">
+    <span>💎 Verified Pro</span>
+  </div>
+        )}
       </div>
 
       <Card.Body className="py-3 px-3">
