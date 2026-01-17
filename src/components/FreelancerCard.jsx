@@ -12,8 +12,11 @@ export default function FreelancerCard({ freelancer }) {
           alt={freelancer.name}
           className="freelancer-img"
         />
+<<<<<<< HEAD
 
         {/* BADGE (manual from DB) */}
+=======
+>>>>>>> 78d33fd2dfd3553c9c202a3e3e311eda7c123e86
         {freelancer.is_best_hired && (
           <div className="ribbon ribbon-top-right">
     <span>💎 Verified Pro</span>
@@ -24,6 +27,13 @@ export default function FreelancerCard({ freelancer }) {
       <Card.Body className="py-3 px-3">
         <h6 className="fw-bold mb-1">{freelancer.name}</h6>
 
+<<<<<<< HEAD
+=======
+        {/* <p className="text-muted small mb-2">
+          {freelancer.bio || "Freelancer"}
+        </p> */}
+
+>>>>>>> 78d33fd2dfd3553c9c202a3e3e311eda7c123e86
         {/* SKILLS */}
         {freelancer.skills && (
           <div className="mb-2">
