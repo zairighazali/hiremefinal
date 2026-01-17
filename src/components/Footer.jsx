@@ -32,7 +32,14 @@ export default function Footer() {
           {/* Copyright */}
           <Col md={4} className="text-md-end">
             <p className="small text-secondary mb-0">
-              © {new Date().getFullYear()} HireME!. All rights reserved.
+              © {new Date().getFullYear()} HireME!. All rights reserved. Powered by{" "}
+              <a
+                href="https://404found.studio"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                404found.studio
+              </a>
             </p>
           </Col>
 
