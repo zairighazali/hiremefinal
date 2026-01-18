@@ -1,4 +1,3 @@
-// src/pages/ProfilePage.jsx - FIXED
 import {
   Container,
   Row,
