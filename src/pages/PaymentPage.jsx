@@ -193,16 +193,21 @@ export default function PaymentPage() {
             Payment will be held in escrow until work is completed
           </p>
 
-          <Elements stripe={stripePromise} options={{ clientSecret }}>
-            <CheckoutForm
-              hireId={hireId}
-              hire={hire}
-              clientSecret={clientSecret}
-              paymentMethod={paymentMethod}
-              onPaymentMethodChange={setPaymentMethod}
-              onSuccess={handleSuccess}
-            />
-          </Elements>
+         {clientSecret ? (
+  <Elements stripe={stripePromise} options={{ clientSecret }}>
+    <CheckoutForm
+      hireId={hireId}
+      hire={hire}
+      clientSecret={clientSecret}
+      paymentMethod={paymentMethod}
+      onPaymentMethodChange={setPaymentMethod}
+      onSuccess={handleSuccess}
+    />
+  </Elements>
+) : (
+  <p>Loading payment options...</p>
+)}
+
         </Card.Body>
       </Card>
     </Container>
