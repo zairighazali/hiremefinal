@@ -72,37 +72,37 @@ export default function StripeOnboardingPage() {
   };
 
   // Open Stripe dashboard
-  const handleOpenDashboard = async () => {
-    try {
-      const res = await authFetch("/api/stripe/login-link");
+  // const handleOpenDashboard = async () => {
+  //   try {
+  //     const res = await authFetch("/api/stripe/login-link");
       
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to get dashboard link");
-      }
+  //     if (!res.ok) {
+  //       const errorData = await res.json().catch(() => ({}));
+  //       throw new Error(errorData.message || "Failed to get dashboard link");
+  //     }
       
-      const data = await res.json();
+  //     const data = await res.json();
       
-      if (!data.url) {
-        throw new Error("No dashboard URL received");
-      }
+  //     if (!data.url) {
+  //       throw new Error("No dashboard URL received");
+  //     }
       
-      console.log("Redirecting to Stripe dashboard:", data.url);
-      window.location.href = data.url;
-    } catch (err) {
-      console.error("Dashboard error:", err);
-      setError(err.message || "Failed to open Stripe dashboard");
-    }
-  };
+  //     console.log("Redirecting to Stripe dashboard:", data.url);
+  //     window.location.href = data.url;
+  //   } catch (err) {
+  //     console.error("Dashboard error:", err);
+  //     setError(err.message || "Failed to open Stripe dashboard");
+  //   }
+  // };
 
-  if (loading) {
-    return (
-      <Container className="py-5 text-center">
-        <Spinner animation="border" />
-        <p className="mt-2">Loading payment settings...</p>
-      </Container>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <Container className="py-5 text-center">
+  //       <Spinner animation="border" />
+  //       <p className="mt-2">Loading payment settings...</p>
+  //     </Container>
+  //   );
+  // }
 
   return (
     <Container className="py-5" style={{ maxWidth: 600 }}>
@@ -224,13 +224,13 @@ export default function StripeOnboardingPage() {
                 >
                   Update Payment Settings
                 </Button>
-                <Button
+                {/* <Button
                   variant="outline-primary"
                   onClick={handleOpenDashboard}
                   className="w-100"
                 >
                   Open Stripe Dashboard
-                </Button>
+                </Button> */}
               </div>
             )}
           </Card.Body>
