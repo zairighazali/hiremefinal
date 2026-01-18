@@ -71,6 +71,7 @@ export default function StripeOnboardingPage() {
     }
   };
 
+  // Open Stripe dashboard
   const handleOpenDashboard = async () => {
     try {
       const res = await authFetch("/api/stripe/login-link");
