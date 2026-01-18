@@ -1,6 +1,6 @@
 import { auth } from "../../firebase";
 
-const API_BASE_URL = "https://ministers-gardening-align-furnishings.trycloudflare.com";
+const API_BASE_URL = "https://hire-me-server-nine.vercel.app";
 
 export async function authFetch(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...options.headers };
