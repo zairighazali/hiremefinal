@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { Container, Card, Button, Alert, Spinner, Badge } from "react-bootstrap";
+import {
+  Container,
+  Card,
+  Button,
+  Alert,
+  Spinner,
+  Badge,
+} from "react-bootstrap";
 import { authFetch } from "../services/api";
 
 export default function StripeOnboardingPage() {
@@ -7,6 +14,7 @@ export default function StripeOnboardingPage() {
   const [loading, setLoading] = useState(true);
   const [onboarding, setOnboarding] = useState(false);
   const [error, setError] = useState("");
+  //const [openDashboard, setOpenDashboard] = useState(false);
 
   // Fetch account status
   const fetchAccountStatus = async () => {
@@ -35,8 +43,8 @@ export default function StripeOnboardingPage() {
     }
 
     // Poll for status updates every 5 seconds
-    const interval = setInterval(fetchAccountStatus, 5000);
-    return () => clearInterval(interval);
+    // const interval = setInterval(fetchAccountStatus, 5000);
+    // return () => clearInterval(interval);
   }, []);
 
   // Start Stripe Connect onboarding
@@ -46,25 +54,25 @@ export default function StripeOnboardingPage() {
 
     try {
       const res = await authFetch("/api/stripe/onboard", { method: "POST" });
-      
+
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         console.error("Onboarding API error:", errorData);
         throw new Error(
-          errorData.error || 
-          errorData.message || 
-          `Failed to start onboarding (${res.status})`
+          errorData.error ||
+            errorData.message ||
+            `Failed to start onboarding (${res.status})`,
         );
       }
 
       const data = await res.json();
-      
+
       if (!data.url) {
         throw new Error("No onboarding URL received from server");
       }
-      
+
       console.log("Redirecting to Stripe:", data.url);
-      
+
       // Redirect to Stripe onboarding
       window.location.href = data.url;
     } catch (err) {
@@ -83,6 +91,16 @@ export default function StripeOnboardingPage() {
     );
   }
 
+  const handleOpenDashboard = async () => {
+    try {
+      const res = await authFetch("/api/stripe/login-link");
+      const data = await res.json();
+      window.location.href = data.url;
+    } catch (err) {
+      setError("Failed to open Stripe dashboard");
+    }
+  };
+
   return (
     <Container className="py-5" style={{ maxWidth: 600 }}>
       <h2 className="mb-4">Payment Settings</h2>
@@ -97,10 +115,12 @@ export default function StripeOnboardingPage() {
           {!accountStatus?.hasAccount ? (
             // No account yet
             <div>
-              <p>Set up your payment account to receive payments from clients.</p>
+              <p>
+                Set up your payment account to receive payments from clients.
+              </p>
               <p className="text-muted small">
-                You'll be redirected to Stripe to complete a secure onboarding process.
-                This is required to receive payments.
+                You'll be redirected to Stripe to complete a secure onboarding
+                process. This is required to receive payments.
               </p>
               <Button
                 variant="primary"
@@ -131,13 +151,17 @@ export default function StripeOnboardingPage() {
                 </div>
                 <div className="d-flex justify-content-between align-items-center mb-2">
                   <span>Charges Enabled:</span>
-                  <Badge bg={accountStatus.chargesEnabled ? "success" : "warning"}>
+                  <Badge
+                    bg={accountStatus.chargesEnabled ? "success" : "warning"}
+                  >
                     {accountStatus.chargesEnabled ? "✓" : "Pending"}
                   </Badge>
                 </div>
                 <div className="d-flex justify-content-between align-items-center mb-2">
                   <span>Payouts Enabled:</span>
-                  <Badge bg={accountStatus.payoutsEnabled ? "success" : "warning"}>
+                  <Badge
+                    bg={accountStatus.payoutsEnabled ? "success" : "warning"}
+                  >
                     {accountStatus.payoutsEnabled ? "✓" : "Pending"}
                   </Badge>
                 </div>
@@ -177,7 +201,8 @@ export default function StripeOnboardingPage() {
                 </div>
               </div>
               <p className="text-muted small">
-                Need to update your payment information? Click below to access your Stripe dashboard.
+                Need to update your payment information? Click below to access
+                your Stripe dashboard.
               </p>
               <Button
                 variant="outline-primary"
@@ -186,6 +211,13 @@ export default function StripeOnboardingPage() {
                 className="w-100"
               >
                 Update Payment Settings
+              </Button>
+              <Button
+                variant="outline-primary"
+                onClick={handleOpenDashboard}
+                className="w-100"
+              >
+                Open Stripe Dashboard
               </Button>
             </div>
           )}
@@ -196,13 +228,13 @@ export default function StripeOnboardingPage() {
         <Card.Body>
           <h6>About Stripe Connect</h6>
           <p className="text-muted small mb-0">
-            We use Stripe Connect to ensure secure and compliant payment processing.
-            Your banking and personal information is handled securely by Stripe and never
-            stored on our servers. Payments are held in escrow until work is completed.
+            We use Stripe Connect to ensure secure and compliant payment
+            processing. Your banking and personal information is handled
+            securely by Stripe and never stored on our servers. Payments are
+            held in escrow until work is completed.
           </p>
         </Card.Body>
       </Card>
     </Container>
   );
 }
-
