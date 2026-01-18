@@ -113,6 +113,7 @@ export default function StripeOnboardingPage() {
       setError(err.message || "Failed to open Stripe dashboard");
     }
   };
+  
 
   return (
     <Container className="py-5" style={{ maxWidth: 600 }}>
