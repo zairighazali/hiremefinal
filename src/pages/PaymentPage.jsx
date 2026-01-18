@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { Container, Card, Button, Alert, Spinner, Form } from "react-bootstrap";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { stripePromise } from "../services/stripe";
 import { authFetch } from "../services/api";
 
 // 🔹 Checkout form
-const CheckoutForm = ({ hireId, hire, clientSecret, paymentMethod, onPaymentMethodChange, onSuccess }) => {
+const CheckoutForm = ({ hireId, hire, onSuccess }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -14,32 +14,46 @@ const CheckoutForm = ({ hireId, hire, clientSecret, paymentMethod, onPaymentMeth
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!stripe || !elements || !clientSecret) return;
+    if (!stripe || !elements) return;
 
     setLoading(true);
     setError("");
 
     try {
-      const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${process.env.REACT_APP_FRONTEND_URL}/payment-success?hireId=${hireId}`,
+      // Use hireId directly, not hire.hire_id
+      const res = await authFetch(`/api/stripe/create-intent/${hireId}`, { 
+        method: "POST" 
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to create payment intent");
+      }
+      
+      const { clientSecret } = await res.json();
+
+      if (!clientSecret) {
+        throw new Error("No client secret received");
+      }
+
+      const result = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { 
+          card: elements.getElement(CardElement) 
         },
       });
 
-      if (stripeError) {
-        setError(stripeError.message);
-      } else if (paymentIntent) {
-        if (paymentIntent.status === "requires_capture") {
-          alert("Payment authorized (card escrow)!");
-        } else if (paymentIntent.status === "succeeded") {
-          alert("Payment succeeded!");
-        }
+      if (result.error) {
+        setError(result.error.message);
+      } else if (result.paymentIntent.status === "requires_capture") {
+        alert("Payment authorized! Amount held in escrow.");
+        onSuccess();
+      } else if (result.paymentIntent.status === "succeeded") {
+        alert("Payment succeeded!");
         onSuccess();
       }
     } catch (err) {
-      console.error("Payment submit error:", err);
-      setError(err.message || "Payment failed");
+      console.error("Payment error:", err);
+      setError(err.message || "An error occurred during payment");
     } finally {
       setLoading(false);
     }
@@ -48,25 +62,33 @@ const CheckoutForm = ({ hireId, hire, clientSecret, paymentMethod, onPaymentMeth
   return (
     <Form onSubmit={handleSubmit}>
       <Form.Group className="mb-3">
-        <Form.Label>Choose Payment Method</Form.Label>
-        <Form.Select value={paymentMethod} onChange={(e) => onPaymentMethodChange(e.target.value)}>
-          <option value="card">Card</option>
-          <option value="fpx">FPX (Online Banking)</option>
-          <option value="grabpay">GrabPay</option>
-        </Form.Select>
-      </Form.Group>
-
-      {clientSecret ? (
-        <div className="border p-3 rounded mb-3">
-          <PaymentElement />
+        <Form.Label>Card Details</Form.Label>
+        <div className="border p-3 rounded">
+          <CardElement options={{
+            style: {
+              base: {
+                fontSize: '16px',
+                color: '#424770',
+                '::placeholder': {
+                  color: '#aab7c4',
+                },
+              },
+              invalid: {
+                color: '#9e2146',
+              },
+            },
+          }} />
         </div>
-      ) : (
-        <p>Loading payment options...</p>
-      )}
+      </Form.Group>
 
       {error && <Alert variant="danger">{error}</Alert>}
 
-      <Button type="submit" className="w-100" disabled={loading || !stripe || !clientSecret}>
+      <Button 
+        type="submit" 
+        variant="primary" 
+        className="w-100" 
+        disabled={!stripe || loading}
+      >
         {loading ? (
           <>
             <Spinner animation="border" size="sm" className="me-2" />
@@ -85,14 +107,10 @@ export default function PaymentPage() {
   const [searchParams] = useSearchParams();
   const hireId = searchParams.get("hireId");
   const navigate = useNavigate();
-
   const [hire, setHire] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [clientSecret, setClientSecret] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("card");
 
-  // Fetch hire details
   const fetchHire = useCallback(async () => {
     if (!hireId) {
       setError("No hire ID provided");
@@ -102,12 +120,14 @@ export default function PaymentPage() {
 
     try {
       const res = await authFetch(`/api/hires/${hireId}`);
+      
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || "Failed to load hire details");
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to load hire details");
       }
-
+      
       const data = await res.json();
+      console.log("Hire data:", data); // Debug log
       setHire(data);
       setError("");
     } catch (err) {
@@ -121,32 +141,6 @@ export default function PaymentPage() {
   useEffect(() => {
     fetchHire();
   }, [fetchHire]);
-
-  // Fetch client secret whenever payment method changes
-  useEffect(() => {
-    async function fetchClientSecret() {
-      if (!hireId) return;
-      setClientSecret("");
-      try {
-        const res = await authFetch(`/api/stripe/create-intent/${hireId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paymentMethod }),
-        });
-        const data = await res.json();
-        if (data.clientSecret) {
-          setClientSecret(data.clientSecret);
-        } else {
-          setError("Failed to create payment intent");
-        }
-      } catch (err) {
-        console.error("Error fetching client secret:", err);
-        setError(err.message || "Failed to create payment intent");
-      }
-    }
-
-    fetchClientSecret();
-  }, [hireId, paymentMethod]);
 
   const handleSuccess = () => {
     navigate("/profile");
@@ -193,21 +187,13 @@ export default function PaymentPage() {
             Payment will be held in escrow until work is completed
           </p>
 
-         {clientSecret ? (
-  <Elements stripe={stripePromise} options={{ clientSecret }}>
-    <CheckoutForm
-      hireId={hireId}
-      hire={hire}
-      clientSecret={clientSecret}
-      paymentMethod={paymentMethod}
-      onPaymentMethodChange={setPaymentMethod}
-      onSuccess={handleSuccess}
-    />
-  </Elements>
-) : (
-  <p>Loading payment options...</p>
-)}
-
+          <Elements stripe={stripePromise}>
+            <CheckoutForm 
+              hireId={hireId} 
+              hire={hire} 
+              onSuccess={handleSuccess} 
+            />
+          </Elements>
         </Card.Body>
       </Card>
     </Container>
