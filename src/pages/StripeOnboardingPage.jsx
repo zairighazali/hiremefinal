@@ -94,10 +94,23 @@ export default function StripeOnboardingPage() {
   const handleOpenDashboard = async () => {
     try {
       const res = await authFetch("/api/stripe/login-link");
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to get dashboard link");
+      }
+      
       const data = await res.json();
+      
+      if (!data.url) {
+        throw new Error("No dashboard URL received");
+      }
+      
+      console.log("Redirecting to Stripe dashboard:", data.url);
       window.location.href = data.url;
     } catch (err) {
-      setError("Failed to open Stripe dashboard");
+      console.error("Dashboard error:", err);
+      setError(err.message || "Failed to open Stripe dashboard");
     }
   };
 
