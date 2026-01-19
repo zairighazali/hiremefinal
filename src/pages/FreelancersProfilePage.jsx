@@ -21,7 +21,7 @@ export default function FreelancerProfilePage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
-  const DEFAULT_IMAGE = "/public/images/default.jpg";
+  const DEFAULT_IMAGE = "../src/assets/images/default.jpg";
 
   // Fetch freelancer profile
   useEffect(() => {
@@ -154,7 +154,7 @@ export default function FreelancerProfilePage() {
                   src={
                     profile.image_url && profile.image_url.trim() !== ""
                       ? profile.image_url
-                      : "/images/default-profile.png"
+                      : DEFAULT_IMAGE
                   }
                   alt={profile.name}
                   width={150}
