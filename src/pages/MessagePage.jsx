@@ -14,7 +14,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { authFetch } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
-import { getDatabase, ref, onValue, onChildAdded, off, query, orderByChild } from "firebase/database";
+import { getDatabase, ref, onValue, off } from "firebase/database";
 import { getSocket } from "../services/socket";
 
 export default function MessagePage() {
@@ -32,6 +32,7 @@ export default function MessagePage() {
   const [notifications, setNotifications] = useState([]);
   const [typingUsers, setTypingUsers] = useState({});
   const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [socketConnected, setSocketConnected] = useState(false);
   
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
@@ -42,14 +43,21 @@ export default function MessagePage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Initialize Socket.io
+  // Initialize Socket.io (optional - graceful degradation)
   useEffect(() => {
     if (!user?.uid) return;
 
     const initSocket = async () => {
       try {
         const socket = await getSocket();
+        
+        if (!socket) {
+          console.log("Running in Firebase-only mode (no Socket.io)");
+          return;
+        }
+
         socketRef.current = socket;
+        setSocketConnected(true);
 
         // Listen for new messages
         socket.on("new_message", (data) => {
@@ -67,7 +75,7 @@ export default function MessagePage() {
             ]);
           }
 
-          // Refresh conversations list to update last message
+          // Refresh conversations list
           fetchConversations();
         });
 
@@ -115,7 +123,7 @@ export default function MessagePage() {
         });
 
       } catch (error) {
-        console.error("Socket initialization error:", error);
+        console.warn("Socket.io features disabled:", error.message);
       }
     };
 
@@ -143,6 +151,8 @@ export default function MessagePage() {
     const unsubscribe = onValue(unreadRef, (snapshot) => {
       const data = snapshot.val();
       setUnreadCounts(data || {});
+    }, (error) => {
+      console.error("Firebase unread listener error:", error);
     });
 
     return () => {
@@ -157,8 +167,8 @@ export default function MessagePage() {
     const db = getDatabase();
     const messagesRef = ref(db, `messages/${activeConv.conversation_id}`);
     
-    // Initial load
-    const unsubscribeValue = onValue(messagesRef, (snapshot) => {
+    // Listen for real-time updates
+    const unsubscribe = onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const msgArray = Object.entries(data).map(([key, msg]) => ({
@@ -174,21 +184,23 @@ export default function MessagePage() {
       } else {
         setMessages([]);
       }
+    }, (error) => {
+      console.error("Firebase messages listener error:", error);
     });
 
     // Mark as read when opening conversation
     markAsRead(activeConv.conversation_id);
 
-    // Join conversation room via socket
-    if (socketRef.current) {
+    // Join conversation room via socket (if available)
+    if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit("join_conversation", activeConv.conversation_id);
     }
 
     return () => {
       off(messagesRef);
       
-      // Leave conversation room
-      if (socketRef.current) {
+      // Leave conversation room (if socket available)
+      if (socketRef.current && socketRef.current.connected) {
         socketRef.current.emit("leave_conversation", activeConv.conversation_id);
       }
     };
@@ -233,13 +245,6 @@ export default function MessagePage() {
     
     try {
       // Messages will be loaded via Firebase listener
-      // Just fetch initial data to ensure connection
-      const res = await authFetch(
-        `/api/chats/${conv.conversation_id}/messages`
-      );
-      
-      if (!res.ok) throw new Error("Failed to fetch messages");
-      
       await markAsRead(conv.conversation_id);
     } catch (err) {
       console.error("Failed to open conversation:", err);
@@ -259,9 +264,9 @@ export default function MessagePage() {
     }
   };
 
-  // Handle typing indicator
+  // Handle typing indicator (only if socket connected)
   const handleTyping = () => {
-    if (!activeConv || !socketRef.current) return;
+    if (!activeConv || !socketConnected) return;
 
     // Clear existing timeout
     if (typingTimeoutRef.current) {
@@ -303,17 +308,22 @@ export default function MessagePage() {
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to send message");
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to send message");
+      }
 
-      // Stop typing indicator
+      // Stop typing indicator (if socket available)
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
       
-      authFetch(`/api/chats/${activeConv.conversation_id}/typing`, {
-        method: "POST",
-        body: JSON.stringify({ isTyping: false }),
-      }).catch(console.error);
+      if (socketConnected) {
+        authFetch(`/api/chats/${activeConv.conversation_id}/typing`, {
+          method: "POST",
+          body: JSON.stringify({ isTyping: false }),
+        }).catch(console.error);
+      }
 
       // Message will appear via Firebase listener
     } catch (err) {
@@ -333,11 +343,11 @@ export default function MessagePage() {
   // Get total unread count
   const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
 
-  // Check if other user is online
-  const isOtherUserOnline = activeConv && onlineUsers.has(activeConv.other_user_uid);
+  // Check if other user is online (only if socket connected)
+  const isOtherUserOnline = socketConnected && activeConv && onlineUsers.has(activeConv.other_user_uid);
 
-  // Check if other user is typing
-  const isOtherUserTyping = activeConv && typingUsers[activeConv.conversation_id];
+  // Check if other user is typing (only if socket connected)
+  const isOtherUserTyping = socketConnected && activeConv && typingUsers[activeConv.conversation_id];
 
   return (
     <Container fluid className="mt-4" style={{ height: "85vh" }}>
@@ -393,7 +403,7 @@ export default function MessagePage() {
                 )}
                 {conversations.map((conv) => {
                   const unreadCount = unreadCounts[conv.conversation_id] || 0;
-                  const isOnline = onlineUsers.has(conv.other_user_uid);
+                  const isOnline = socketConnected && onlineUsers.has(conv.other_user_uid);
                   
                   return (
                     <ListGroup.Item
@@ -486,9 +496,11 @@ export default function MessagePage() {
                   <div className="fw-bold">
                     {activeConv.other_user_name || "Unknown User"}
                   </div>
-                  <small className="text-muted">
-                    {isOtherUserOnline ? "Online" : "Offline"}
-                  </small>
+                  {socketConnected && (
+                    <small className="text-muted">
+                      {isOtherUserOnline ? "Online" : "Offline"}
+                    </small>
+                  )}
                 </div>
               </Card.Header>
 
@@ -556,7 +568,9 @@ export default function MessagePage() {
                     value={text}
                     onChange={(e) => {
                       setText(e.target.value);
-                      handleTyping();
+                      if (socketConnected) {
+                        handleTyping();
+                      }
                     }}
                     placeholder="Type a message..."
                     disabled={sending}
