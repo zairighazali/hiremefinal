@@ -27,7 +27,7 @@ export function AuthProvider({ children }) {
       if (!user || syncedRef.current) return;
 
       try {
-        await user.getIdToken(); // ensure token ready
+        await user.getIdToken(); 
         await authFetch("/users/me", { method: "POST" });
         syncedRef.current = true;
       } catch (err) {

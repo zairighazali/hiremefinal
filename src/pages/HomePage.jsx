@@ -18,7 +18,6 @@ export default function HomePage() {
   ];
 
 
-  // 🔹 Shuffle helper
 const shuffleArray = (arr) => {
   const copy = [...arr];
   for (let i = copy.length - 1; i > 0; i--) {
@@ -28,7 +27,6 @@ const shuffleArray = (arr) => {
   return copy;
 };
 
-  // 🔹 Fetch freelancers, public or auth
   const fetchFreelancers = async (q = "") => {
   setLoading(true);
   try {
@@ -47,7 +45,6 @@ const shuffleArray = (arr) => {
       data = await res.json();
     }
 
-    // 🔹 Shuffle before setting state
     setFreelancers(shuffleArray(data));
 
   } catch (err) {
@@ -58,12 +55,10 @@ const shuffleArray = (arr) => {
   }
 };
 
-  // 🔹 Initial fetch on mount / user change
   useEffect(() => {
     fetchFreelancers();
   }, [user]);
 
-  // 🔹 Search handler
   const handleSearch = (e) => {
     const val = e.target.value;
     setSearch(val);

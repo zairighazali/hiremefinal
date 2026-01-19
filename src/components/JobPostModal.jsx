@@ -30,7 +30,6 @@ export default function JobPostModal({ show, onHide, onPosted }) {
       });
 
       if (!response.ok) {
-        // Tangkap error backend
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "Failed to post job");
       }

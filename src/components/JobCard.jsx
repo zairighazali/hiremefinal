@@ -20,7 +20,7 @@ export default function JobCard({ job, onUpdated, onDeleted }) {
   const [location, setLocation] = useState(job.location || "");
   const [payment, setPayment] = useState(job.payment || "");
 
-  // Determine user permissions and job state
+  // user permissions and job state
   const isOwner = currentUserUid && job.owner_uid === currentUserUid;
   const isOpen = job.status === "open";
   const hasApplied = job.has_applied === true;

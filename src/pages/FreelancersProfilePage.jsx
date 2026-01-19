@@ -1,4 +1,3 @@
-// src/pages/FreelancerProfilePage.jsx - FIXED
 import {
   Container,
   Row,

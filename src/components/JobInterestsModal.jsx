@@ -1,4 +1,3 @@
-// src/components/JobInterestsModal.jsx - FIXED
 import { useState, useEffect, useCallback } from "react";
 import { Modal, Button, ListGroup, Badge, Spinner, Alert } from "react-bootstrap";
 import { authFetch } from "../services/api";

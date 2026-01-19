@@ -5,7 +5,6 @@ import { Elements, CardElement, useStripe, useElements } from "@stripe/react-str
 import { stripePromise } from "../services/stripe";
 import { authFetch } from "../services/api";
 
-// 🔹 Checkout form
 const CheckoutForm = ({ hireId, hire, onSuccess }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -102,7 +101,6 @@ const CheckoutForm = ({ hireId, hire, onSuccess }) => {
   );
 };
 
-// 🔹 PaymentPage
 export default function PaymentPage() {
   const [searchParams] = useSearchParams();
   const hireId = searchParams.get("hireId");
