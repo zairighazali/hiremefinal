@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-
 import HomePage from "./pages/HomePage";
 import JobsPage from "./pages/JobsPage";
 import FreelancersProfilePage from "./pages/FreelancersProfilePage";
@@ -12,7 +11,10 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
 import StripeOnboardingPage from "./pages/StripeOnboardingPage";
-import PrivacyPolicy from "./pages/PrivacyPolicy"; // <-- import PrivacyPolicy page
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import { useEffect } from "react";
+import { useAuth } from "./hooks/useAuth";
+import { getSocket } from "./services/socket";
 
 function Layout({ children }) {
   const location = useLocation();
@@ -29,6 +31,18 @@ function Layout({ children }) {
 }
 
 export default function App() {
+
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.uid) {
+      getSocket().catch(err => {
+        console.error("Failed to initialize socket:", err);
+      });
+    }
+  }, [user?.uid]);
+
+
   return (
     <BrowserRouter>
       <Layout>

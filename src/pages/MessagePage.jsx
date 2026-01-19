@@ -8,14 +8,14 @@ import {
   Card,
   Spinner,
   Badge,
-  Toast,
-  ToastContainer,
+  Alert,
 } from "react-bootstrap";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { authFetch } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
-import { getDatabase, ref, onValue, push, set, get, off } from "firebase/database";
+import { getDatabase, ref, onValue, onChildAdded, off, query, orderByChild } from "firebase/database";
+import { getSocket } from "../services/socket";
 
 export default function MessagePage() {
   const { user } = useAuth();
@@ -30,97 +30,174 @@ export default function MessagePage() {
   const [sending, setSending] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState({});
   const [notifications, setNotifications] = useState([]);
+  const [typingUsers, setTypingUsers] = useState({});
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
   
   const messagesEndRef = useRef(null);
-  const audioRef = useRef(null);
+  const socketRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   // Scroll to bottom
-  const scrollToBottom = () =>
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-
-  // Play notification sound
-  const playNotificationSound = () => {
-    if (audioRef.current) {
-      audioRef.current.play().catch(e => console.log("Audio play failed:", e));
-    }
   };
 
-  // Initialize Firebase listeners
+  // Initialize Socket.io
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const initSocket = async () => {
+      try {
+        const socket = await getSocket();
+        socketRef.current = socket;
+
+        // Listen for new messages
+        socket.on("new_message", (data) => {
+          const { conversationId: msgConvId, message } = data;
+          
+          // Show notification if not in active conversation
+          if (!activeConv || activeConv.conversation_id !== msgConvId) {
+            setNotifications(prev => [
+              ...prev,
+              {
+                id: Date.now(),
+                message: `New message from ${message.sender_name}!`,
+                conversationId: msgConvId,
+              }
+            ]);
+          }
+
+          // Refresh conversations list to update last message
+          fetchConversations();
+        });
+
+        // Listen for notifications
+        socket.on("notification", (data) => {
+          setNotifications(prev => [
+            ...prev,
+            {
+              id: data.timestamp,
+              message: data.message,
+              conversationId: data.conversationId,
+            }
+          ]);
+        });
+
+        // Listen for typing indicator
+        socket.on("user_typing", (data) => {
+          const { conversationId: typingConvId, userUid, isTyping } = data;
+          
+          if (activeConv && activeConv.conversation_id === typingConvId) {
+            setTypingUsers(prev => ({
+              ...prev,
+              [typingConvId]: isTyping ? userUid : null
+            }));
+          }
+        });
+
+        // Listen for messages seen
+        socket.on("messages_seen", (data) => {
+          const { conversationId: seenConvId } = data;
+          console.log(`Messages seen in conversation ${seenConvId}`);
+        });
+
+        // Listen for online/offline status
+        socket.on("user_online", (data) => {
+          setOnlineUsers(prev => new Set([...prev, data.userId]));
+        });
+
+        socket.on("user_offline", (data) => {
+          setOnlineUsers(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(data.userId);
+            return newSet;
+          });
+        });
+
+      } catch (error) {
+        console.error("Socket initialization error:", error);
+      }
+    };
+
+    initSocket();
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.off("new_message");
+        socketRef.current.off("notification");
+        socketRef.current.off("user_typing");
+        socketRef.current.off("messages_seen");
+        socketRef.current.off("user_online");
+        socketRef.current.off("user_offline");
+      }
+    };
+  }, [user?.uid]);
+
+  // Initialize Firebase listeners for unread counts
   useEffect(() => {
     if (!user?.uid) return;
 
     const db = getDatabase();
-
-    // Listen for new notifications
-    const notificationsRef = ref(db, `notifications/${user.uid}`);
-    const unsubscribeNotifications = onValue(notificationsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const notifArray = Object.entries(data).map(([key, val]) => ({
-          id: key,
-          ...val,
-        }));
-        
-        // Show only unread notifications
-        const unread = notifArray.filter(n => !n.read);
-        setNotifications(unread);
-        
-        // Play sound for new messages
-        if (unread.length > 0) {
-          playNotificationSound();
-        }
-      }
-    });
-
-    // Listen for unread counts
     const unreadRef = ref(db, `unread/${user.uid}`);
-    const unsubscribeUnread = onValue(unreadRef, (snapshot) => {
+    
+    const unsubscribe = onValue(unreadRef, (snapshot) => {
       const data = snapshot.val();
       setUnreadCounts(data || {});
     });
 
     return () => {
-      off(notificationsRef);
       off(unreadRef);
     };
   }, [user?.uid]);
 
   // Listen for real-time messages in active conversation
   useEffect(() => {
-    if (!activeConv?.id || !user?.uid) return;
+    if (!activeConv?.conversation_id || !user?.uid) return;
 
     const db = getDatabase();
-    const messagesRef = ref(db, `messages/${activeConv.id}`);
+    const messagesRef = ref(db, `messages/${activeConv.conversation_id}`);
     
-    const unsubscribe = onValue(messagesRef, (snapshot) => {
+    // Initial load
+    const unsubscribeValue = onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const msgArray = Object.values(data)
-          .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        
-        // Update messages state
-        setMessages(msgArray.map(msg => ({
-          id: msg.id,
-          chat_id: msg.chatId,
+        const msgArray = Object.entries(data).map(([key, msg]) => ({
+          id: key,
           sender_uid: msg.senderUid,
           content: msg.content,
           created_at: msg.createdAt,
-        })));
+          timestamp: msg.timestamp || 0,
+        })).sort((a, b) => a.timestamp - b.timestamp);
+        
+        setMessages(msgArray);
+        setTimeout(scrollToBottom, 100);
+      } else {
+        setMessages([]);
       }
     });
 
     // Mark as read when opening conversation
-    markAsRead(activeConv.id);
+    markAsRead(activeConv.conversation_id);
+
+    // Join conversation room via socket
+    if (socketRef.current) {
+      socketRef.current.emit("join_conversation", activeConv.conversation_id);
+    }
 
     return () => {
       off(messagesRef);
+      
+      // Leave conversation room
+      if (socketRef.current) {
+        socketRef.current.emit("leave_conversation", activeConv.conversation_id);
+      }
     };
-  }, [activeConv?.id, user?.uid]);
+  }, [activeConv?.conversation_id, user?.uid]);
 
   // Fetch conversations list
   const fetchConversations = async () => {
     try {
-      const res = await authFetch("/api/conversations");
+      const res = await authFetch("/api/chats");
       if (!res.ok) throw new Error("Failed to fetch conversations");
       
       const data = await res.json();
@@ -132,8 +209,10 @@ export default function MessagePage() {
   };
 
   useEffect(() => {
-    fetchConversations();
-  }, []);
+    if (user?.uid) {
+      fetchConversations();
+    }
+  }, [user?.uid]);
 
   // Open conversation from URL param
   useEffect(() => {
@@ -153,20 +232,17 @@ export default function MessagePage() {
     setLoading(true);
     
     try {
+      // Messages will be loaded via Firebase listener
+      // Just fetch initial data to ensure connection
       const res = await authFetch(
-        `/api/conversations/${conv.conversation_id}/messages`
+        `/api/chats/${conv.conversation_id}/messages`
       );
       
       if (!res.ok) throw new Error("Failed to fetch messages");
       
-      const data = await res.json();
-      setMessages(Array.isArray(data) ? data : []);
-      
-      // Mark as read
       await markAsRead(conv.conversation_id);
     } catch (err) {
-      console.error("Failed to fetch messages:", err);
-      setMessages([]);
+      console.error("Failed to open conversation:", err);
     } finally {
       setLoading(false);
     }
@@ -178,23 +254,33 @@ export default function MessagePage() {
       await authFetch(`/api/chats/${chatId}/read`, {
         method: "POST",
       });
-      
-      // Clear notifications for this chat
-      const db = getDatabase();
-      const notificationsRef = ref(db, `notifications/${user.uid}`);
-      const snapshot = await get(notificationsRef);
-      const data = snapshot.val();
-      
-      if (data) {
-        Object.entries(data).forEach(([key, val]) => {
-          if (val.chatId === chatId) {
-            set(ref(db, `notifications/${user.uid}/${key}`), null);
-          }
-        });
-      }
     } catch (err) {
       console.error("Failed to mark as read:", err);
     }
+  };
+
+  // Handle typing indicator
+  const handleTyping = () => {
+    if (!activeConv || !socketRef.current) return;
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Send typing started
+    authFetch(`/api/chats/${activeConv.conversation_id}/typing`, {
+      method: "POST",
+      body: JSON.stringify({ isTyping: true }),
+    }).catch(console.error);
+
+    // Set timeout to send typing stopped
+    typingTimeoutRef.current = setTimeout(() => {
+      authFetch(`/api/chats/${activeConv.conversation_id}/typing`, {
+        method: "POST",
+        body: JSON.stringify({ isTyping: false }),
+      }).catch(console.error);
+    }, 1000);
   };
 
   // Send message
@@ -208,15 +294,26 @@ export default function MessagePage() {
     setText("");
 
     try {
-      const res = await authFetch(
-        `/api/conversations/${activeConv.conversation_id}/messages`,
-        {
-          method: "POST",
-          body: JSON.stringify({ content: messageText }),
-        }
-      );
+      const res = await authFetch("/api/chats/send", {
+        method: "POST",
+        body: JSON.stringify({ 
+          receiverUid: activeConv.other_user_uid,
+          content: messageText,
+          conversationId: activeConv.conversation_id,
+        }),
+      });
 
       if (!res.ok) throw new Error("Failed to send message");
+
+      // Stop typing indicator
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      authFetch(`/api/chats/${activeConv.conversation_id}/typing`, {
+        method: "POST",
+        body: JSON.stringify({ isTyping: false }),
+      }).catch(console.error);
 
       // Message will appear via Firebase listener
     } catch (err) {
@@ -233,35 +330,38 @@ export default function MessagePage() {
     setNotifications(prev => prev.filter(n => n.id !== notifId));
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
   // Get total unread count
   const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
 
+  // Check if other user is online
+  const isOtherUserOnline = activeConv && onlineUsers.has(activeConv.other_user_uid);
+
+  // Check if other user is typing
+  const isOtherUserTyping = activeConv && typingUsers[activeConv.conversation_id];
+
   return (
     <Container fluid className="mt-4" style={{ height: "85vh" }}>
-      {/* Notification Sound */}
-      <audio ref={audioRef} src="/notification.mp3" preload="auto" />
-      
-      {/* Notification Toasts */}
-      <ToastContainer position="top-end" className="p-3" style={{ zIndex: 9999 }}>
-        {notifications.slice(0, 3).map((notif) => (
-          <Toast
-            key={notif.id}
-            onClose={() => dismissNotification(notif.id)}
-            delay={5000}
-            autohide
-          >
-            <Toast.Header>
-              <strong className="me-auto">New Message</strong>
-              <small>just now</small>
-            </Toast.Header>
-            <Toast.Body>{notif.content}</Toast.Body>
-          </Toast>
-        ))}
-      </ToastContainer>
+      {/* Notification Alerts */}
+      {notifications.length > 0 && (
+        <div style={{ position: "fixed", top: 70, right: 20, zIndex: 9999, maxWidth: 400 }}>
+          {notifications.slice(0, 3).map((notif) => (
+            <Alert
+              key={notif.id}
+              variant="info"
+              dismissible
+              onClose={() => dismissNotification(notif.id)}
+              className="mb-2"
+              style={{ cursor: "pointer" }}
+              onClick={() => {
+                navigate(`/messages/${notif.conversationId}`);
+                dismissNotification(notif.id);
+              }}
+            >
+              {notif.message}
+            </Alert>
+          ))}
+        </div>
+      )}
 
       <Row className="g-3 h-100">
         {/* Conversations list */}
@@ -293,6 +393,7 @@ export default function MessagePage() {
                 )}
                 {conversations.map((conv) => {
                   const unreadCount = unreadCounts[conv.conversation_id] || 0;
+                  const isOnline = onlineUsers.has(conv.other_user_uid);
                   
                   return (
                     <ListGroup.Item
@@ -304,16 +405,32 @@ export default function MessagePage() {
                       onClick={() => openConversation(conv)}
                       className="d-flex align-items-center gap-2"
                     >
-                      <img
-                        src={
-                          conv.other_user_image ||
-                          "https://via.placeholder.com/40"
-                        }
-                        width={40}
-                        height={40}
-                        className="rounded-circle"
-                        alt={conv.other_user_name}
-                      />
+                      <div style={{ position: "relative" }}>
+                        <img
+                          src={
+                            conv.other_user_image ||
+                            "https://via.placeholder.com/40"
+                          }
+                          width={40}
+                          height={40}
+                          className="rounded-circle"
+                          alt={conv.other_user_name}
+                        />
+                        {isOnline && (
+                          <span
+                            style={{
+                              position: "absolute",
+                              bottom: 0,
+                              right: 0,
+                              width: 12,
+                              height: 12,
+                              backgroundColor: "#28a745",
+                              borderRadius: "50%",
+                              border: "2px solid white",
+                            }}
+                          />
+                        )}
+                      </div>
                       <div className="flex-grow-1">
                         <div className="d-flex justify-content-between align-items-center">
                           <div className="fw-bold">
@@ -325,11 +442,6 @@ export default function MessagePage() {
                             </Badge>
                           )}
                         </div>
-                        {conv.last_message && (
-                          <div className="small text-muted text-truncate">
-                            {conv.last_message}
-                          </div>
-                        )}
                       </div>
                     </ListGroup.Item>
                   );
@@ -344,20 +456,39 @@ export default function MessagePage() {
           {activeConv ? (
             <Card className="h-100 d-flex flex-column">
               <Card.Header className="d-flex align-items-center gap-2">
-                <img
-                  src={
-                    activeConv.other_user_image ||
-                    "https://via.placeholder.com/40"
-                  }
-                  width={40}
-                  height={40}
-                  className="rounded-circle"
-                  alt={activeConv.other_user_name}
-                />
+                <div style={{ position: "relative" }}>
+                  <img
+                    src={
+                      activeConv.other_user_image ||
+                      "https://via.placeholder.com/40"
+                    }
+                    width={40}
+                    height={40}
+                    className="rounded-circle"
+                    alt={activeConv.other_user_name}
+                  />
+                  {isOtherUserOnline && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        bottom: 0,
+                        right: 0,
+                        width: 12,
+                        height: 12,
+                        backgroundColor: "#28a745",
+                        borderRadius: "50%",
+                        border: "2px solid white",
+                      }}
+                    />
+                  )}
+                </div>
                 <div>
                   <div className="fw-bold">
                     {activeConv.other_user_name || "Unknown User"}
                   </div>
+                  <small className="text-muted">
+                    {isOtherUserOnline ? "Online" : "Offline"}
+                  </small>
                 </div>
               </Card.Header>
 
@@ -372,39 +503,49 @@ export default function MessagePage() {
                     No messages yet. Start the conversation!
                   </p>
                 ) : (
-                  messages.map((m) => {
-                    const isMine = m.sender_uid === user?.uid;
-                    
-                    return (
-                      <div
-                        key={m.id}
-                        className={`mb-3 d-flex ${
-                          isMine ? "justify-content-end" : "justify-content-start"
-                        }`}
-                      >
+                  <>
+                    {messages.map((m) => {
+                      const isMine = m.sender_uid === user?.uid;
+                      
+                      return (
                         <div
-                          className={`px-3 py-2 rounded ${
-                            isMine
-                              ? "bg-primary text-white"
-                              : "bg-light text-dark"
+                          key={m.id}
+                          className={`mb-3 d-flex ${
+                            isMine ? "justify-content-end" : "justify-content-start"
                           }`}
-                          style={{ maxWidth: "70%" }}
                         >
-                          <div>{m.content}</div>
-                          <small
-                            className={`d-block mt-1 ${
-                              isMine ? "text-white-50" : "text-muted"
+                          <div
+                            className={`px-3 py-2 rounded ${
+                              isMine
+                                ? "bg-primary text-white"
+                                : "bg-light text-dark"
                             }`}
+                            style={{ maxWidth: "70%" }}
                           >
-                            {new Date(m.created_at).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </small>
+                            <div>{m.content}</div>
+                            <small
+                              className={`d-block mt-1 ${
+                                isMine ? "text-white-50" : "text-muted"
+                              }`}
+                              style={{ fontSize: "0.7rem" }}
+                            >
+                              {new Date(m.created_at).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </small>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {isOtherUserTyping && (
+                      <div className="mb-3 d-flex justify-content-start">
+                        <div className="px-3 py-2 rounded bg-light text-dark">
+                          <small className="text-muted">typing...</small>
                         </div>
                       </div>
-                    );
-                  })
+                    )}
+                  </>
                 )}
                 <div ref={messagesEndRef} />
               </Card.Body>
@@ -413,7 +554,10 @@ export default function MessagePage() {
                 <Form onSubmit={sendMessage} className="d-flex gap-2">
                   <Form.Control
                     value={text}
-                    onChange={(e) => setText(e.target.value)}
+                    onChange={(e) => {
+                      setText(e.target.value);
+                      handleTyping();
+                    }}
                     placeholder="Type a message..."
                     disabled={sending}
                   />
