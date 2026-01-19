@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { authFetch } from "../services/api";
+import defaultImage from "../assets/images/default.jpg";
 
 export default function FreelancerProfilePage() {
   const { uid } = useParams();
@@ -21,7 +22,7 @@ export default function FreelancerProfilePage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
-  const DEFAULT_IMAGE = "../src/assets/images/default.jpg";
+  const DEFAULT_IMAGE = defaultImage;
 
   // Fetch freelancer profile
   useEffect(() => {

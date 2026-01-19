@@ -1,8 +1,9 @@
 import { Card, Button, Badge } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import "../App.css";
+import defaultImage from "../assets/images/default.jpg";    
 
-const DEFAULT_IMAGE = "./src/assets/images/default.jpg";
+const DEFAULT_IMAGE = defaultImage;
 
 export default function FreelancerCard({ freelancer }) {
   return (
