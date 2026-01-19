@@ -17,10 +17,11 @@ export default function FreelancerProfilePage() {
   const { uid } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
+  const DEFAULT_IMAGE = "/public/images/default.jpg";
 
   // Fetch freelancer profile
   useEffect(() => {
@@ -37,16 +38,17 @@ export default function FreelancerProfilePage() {
         }
 
         if (!res.ok) throw new Error("Failed to fetch profile");
-        
+
         const data = await res.json();
 
         setProfile({
           ...data,
-          skills: typeof data.skills === "string" 
-            ? data.skills 
-            : Array.isArray(data.skills)
-            ? data.skills.join(", ")
-            : "",
+          skills:
+            typeof data.skills === "string"
+              ? data.skills
+              : Array.isArray(data.skills)
+                ? data.skills.join(", ")
+                : "",
         });
       } catch (err) {
         console.error("Failed to fetch freelancer profile:", err);
@@ -78,7 +80,7 @@ export default function FreelancerProfilePage() {
     }
 
     setChatLoading(true);
-    
+
     try {
       const res = await authFetch("/api/conversations/start", {
         method: "POST",
@@ -91,7 +93,7 @@ export default function FreelancerProfilePage() {
       }
 
       const data = await res.json();
-      
+
       if (!data?.conversation_id) {
         throw new Error("Conversation ID not returned");
       }
@@ -121,9 +123,9 @@ export default function FreelancerProfilePage() {
       <Container className="py-5">
         <Card className="text-center p-5">
           <h4>Freelancer not found</h4>
-          <Button 
-            variant="primary" 
-            className="mt-3" 
+          <Button
+            variant="primary"
+            className="mt-3"
             onClick={() => navigate("/")}
           >
             Back to Home
@@ -133,8 +135,11 @@ export default function FreelancerProfilePage() {
     );
   }
 
-  const skillsArray = profile.skills 
-    ? profile.skills.split(",").map(s => s.trim()).filter(Boolean)
+  const skillsArray = profile.skills
+    ? profile.skills
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
     : [];
 
   return (
@@ -146,17 +151,24 @@ export default function FreelancerProfilePage() {
               {/* Profile Image */}
               <div className="text-center mb-4">
                 <img
-                  src={profile.image_url || "https://via.placeholder.com/150"}
+                  src={
+                    profile.image_url && profile.image_url.trim() !== ""
+                      ? profile.image_url
+                      : "/images/default-profile.png"
+                  }
                   alt={profile.name}
                   width={150}
                   height={150}
                   className="rounded-circle mb-3"
                   style={{ objectFit: "cover" }}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = DEFAULT_IMAGE;
+                  }}
                 />
+
                 <h3 className="mb-1">{profile.name || "Unnamed Freelancer"}</h3>
-                {profile.email && (
-                  <p className="text-muted">{profile.email}</p>
-                )}
+                {profile.email && <p className="text-muted">{profile.email}</p>}
               </div>
 
               {/* Skills */}
@@ -165,11 +177,7 @@ export default function FreelancerProfilePage() {
                   <h5 className="mb-2">Skills</h5>
                   <div className="d-flex flex-wrap gap-2">
                     {skillsArray.map((skill, idx) => (
-                      <Badge 
-                        key={idx} 
-                        bg="primary" 
-                        className="px-3 py-2"
-                      >
+                      <Badge key={idx} bg="primary" className="px-3 py-2">
                         {skill}
                       </Badge>
                     ))}
@@ -208,8 +216,8 @@ export default function FreelancerProfilePage() {
                   )}
                 </Button>
 
-                <Button 
-                  variant="outline-secondary" 
+                <Button
+                  variant="outline-secondary"
                   onClick={() => navigate(-1)}
                 >
                   Back
