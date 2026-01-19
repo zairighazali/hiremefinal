@@ -167,6 +167,12 @@ export default function FreelancerProfilePage() {
                   }}
                 />
 
+                {profile.is_best_hired && (
+                  <div className="ribbon ribbon-top-right">
+                    <span>💎 Verified Pro</span>
+                  </div>
+                )}
+
                 <h3 className="mb-1">{profile.name || "Unnamed Freelancer"}</h3>
                 {profile.email && <p className="text-muted">{profile.email}</p>}
               </div>
