@@ -11,13 +11,25 @@ export default function JobPostModal({ show, onHide, onPosted }) {
     payment: "",
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
 
+    // ✅ FRONTEND PAYMENT VALIDATION
+    if (form.payment) {
+      const paymentValue = Number(form.payment);
+
+      if (isNaN(paymentValue) || paymentValue <= 0) {
+        setLoading(false);
+        setError("Payment must be a number greater than 0");
+        return;
+      }
+    }
+
     try {
-      // POST ke backend
       const response = await authFetch("/api/jobs", {
         method: "POST",
         body: JSON.stringify({
@@ -37,7 +49,6 @@ export default function JobPostModal({ show, onHide, onPosted }) {
       const newJob = await response.json();
       onPosted?.(newJob);
 
-      // Reset form
       setForm({
         title: "",
         description: "",
@@ -47,8 +58,8 @@ export default function JobPostModal({ show, onHide, onPosted }) {
       });
 
       onHide();
-    } catch (error) {
-      alert(error.message);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -109,9 +120,7 @@ export default function JobPostModal({ show, onHide, onPosted }) {
                 type="text"
                 placeholder="e.g. Kuala Lumpur"
                 value={form.location}
-                onChange={(e) =>
-                  setForm({ ...form, location: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
               />
             </Form.Group>
           )}
@@ -123,9 +132,9 @@ export default function JobPostModal({ show, onHide, onPosted }) {
               type="number"
               placeholder="e.g. 500"
               value={form.payment}
-              onChange={(e) =>
-                setForm({ ...form, payment: e.target.value })
-              }
+              min="1"
+              step="0.01"
+              onChange={(e) => setForm({ ...form, payment: e.target.value })}
             />
           </Form.Group>
 
