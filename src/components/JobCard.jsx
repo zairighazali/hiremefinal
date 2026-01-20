@@ -1,8 +1,30 @@
 import { useState } from "react";
 import { getAuth } from "firebase/auth";
-import { Card, Button, Badge, Modal, Form, Spinner } from "react-bootstrap";
+import { Card, Button, Badge, Modal, Form, Spinner, Alert } from "react-bootstrap";
 import JobInterestsModal from "./JobInterestsModal";
 import { authFetch } from "../services/api";
+
+// List of Malaysian states and territories
+const MALAYSIAN_LOCATIONS = [
+  "Johor",
+  "Kedah",
+  "Kelantan",
+  "Malacca",
+  "Melaka",
+  "Negeri Sembilan",
+  "Pahang",
+  "Penang",
+  "Pulau Pinang",
+  "Perak",
+  "Perlis",
+  "Sabah",
+  "Sarawak",
+  "Selangor",
+  "Terengganu",
+  "Kuala Lumpur",
+  "Labuan",
+  "Putrajaya",
+];
 
 export default function JobCard({ job, onUpdated, onDeleted }) {
   const auth = getAuth();
@@ -28,6 +50,26 @@ export default function JobCard({ job, onUpdated, onDeleted }) {
   // Edit job
   const handleEdit = async () => {
     if (!confirm("Save changes to this job?")) return;
+
+    // ✅ Validate remote or location
+    if (!isRemote && !location.trim()) {
+      setError("Please specify a location or select remote work");
+      return;
+    }
+
+    // ✅ Validate Malaysia location only
+    if (!isRemote && location.trim()) {
+      const isValidLocation = MALAYSIAN_LOCATIONS.some(
+        (loc) => loc.toLowerCase() === location.trim().toLowerCase()
+      );
+
+      if (!isValidLocation) {
+        setError(
+          `Location must be in Malaysia. Valid locations include: ${MALAYSIAN_LOCATIONS.slice(0, 5).join(", ")}, etc.`
+        );
+        return;
+      }
+    }
 
     setLoading(true);
     setError("");
@@ -101,11 +143,10 @@ export default function JobCard({ job, onUpdated, onDeleted }) {
     setError("");
 
     try {
-      // FIXED: Changed from /interested to /interest
       const res = await authFetch(`/api/jobs/${job.id}/interest`, {
         method: "POST",
         body: JSON.stringify({
-          message: "" // Optional message
+          message: ""
         }),
       });
 
@@ -168,7 +209,9 @@ export default function JobCard({ job, onUpdated, onDeleted }) {
           )}
 
           {error && (
-            <div className="alert alert-danger py-2 mb-2">{error}</div>
+            <Alert variant="danger" dismissible onClose={() => setError("")}>
+              {error}
+            </Alert>
           )}
 
           {/* OWNER ACTIONS */}
@@ -218,7 +261,7 @@ export default function JobCard({ job, onUpdated, onDeleted }) {
             </div>
           )}
 
-          {/* FREELANCER ACTIONS */}
+          {/* FREELANCER ACTIONS - ✅ ONLY SHOW IF NOT OWNER */}
           {!isOwner && isOpen && !hasApplied && (
             <Button
               size="sm"
@@ -263,6 +306,10 @@ export default function JobCard({ job, onUpdated, onDeleted }) {
         </Modal.Header>
 
         <Modal.Body>
+          <Alert variant="info" className="mb-3">
+            <small>📍 Currently available for Malaysian locations only</small>
+          </Alert>
+
           <Form>
             <Form.Group className="mb-3">
               <Form.Label>Job Title</Form.Label>
@@ -288,18 +335,27 @@ export default function JobCard({ job, onUpdated, onDeleted }) {
               type="checkbox"
               label="Remote Work"
               checked={isRemote}
-              onChange={(e) => setIsRemote(e.target.checked)}
+              onChange={(e) => {
+                setIsRemote(e.target.checked);
+                if (e.target.checked) setLocation("");
+              }}
               className="mb-3"
             />
 
             {!isRemote && (
               <Form.Group className="mb-3">
-                <Form.Label>Location</Form.Label>
+                <Form.Label>
+                  Location <span className="text-danger">*</span>
+                </Form.Label>
                 <Form.Control
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g., Kuala Lumpur"
+                  placeholder="e.g., Kuala Lumpur, Selangor, Penang"
+                  required={!isRemote}
                 />
+                <Form.Text className="text-muted">
+                  Enter a Malaysian state or territory
+                </Form.Text>
               </Form.Group>
             )}
 

@@ -1,6 +1,28 @@
 import { useState } from "react";
-import { Modal, Button, Form } from "react-bootstrap";
+import { Modal, Button, Form, Alert } from "react-bootstrap";
 import { authFetch } from "../services/api";
+
+// List of Malaysian states and territories
+const MALAYSIAN_LOCATIONS = [
+  "Johor",
+  "Kedah",
+  "Kelantan",
+  "Malacca",
+  "Melaka",
+  "Negeri Sembilan",
+  "Pahang",
+  "Penang",
+  "Pulau Pinang",
+  "Perak",
+  "Perlis",
+  "Sabah",
+  "Sarawak",
+  "Selangor",
+  "Terengganu",
+  "Kuala Lumpur",
+  "Labuan",
+  "Putrajaya",
+];
 
 export default function JobPostModal({ show, onHide, onPosted }) {
   const [form, setForm] = useState({
@@ -18,7 +40,29 @@ export default function JobPostModal({ show, onHide, onPosted }) {
     setError("");
     setLoading(true);
 
-    // ✅ FRONTEND PAYMENT VALIDATION
+    // ✅ Validate remote or location
+    if (!form.is_remote && !form.location.trim()) {
+      setLoading(false);
+      setError("Please specify a location or select remote work");
+      return;
+    }
+
+    // ✅ Validate Malaysia location only
+    if (!form.is_remote && form.location.trim()) {
+      const isValidLocation = MALAYSIAN_LOCATIONS.some(
+        (loc) => loc.toLowerCase() === form.location.trim().toLowerCase()
+      );
+
+      if (!isValidLocation) {
+        setLoading(false);
+        setError(
+          `Location must be in Malaysia. Valid locations include: ${MALAYSIAN_LOCATIONS.slice(0, 5).join(", ")}, etc.`
+        );
+        return;
+      }
+    }
+
+    // ✅ Payment validation
     if (form.payment) {
       const paymentValue = Number(form.payment);
 
@@ -58,6 +102,9 @@ export default function JobPostModal({ show, onHide, onPosted }) {
       });
 
       onHide();
+      
+      // ✅ Auto-refresh page after posting
+      window.location.reload();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -72,6 +119,16 @@ export default function JobPostModal({ show, onHide, onPosted }) {
       </Modal.Header>
 
       <Modal.Body>
+        <Alert variant="info" className="mb-3">
+          <small>📍 Currently available for Malaysian locations only</small>
+        </Alert>
+
+        {error && (
+          <Alert variant="danger" dismissible onClose={() => setError("")}>
+            {error}
+          </Alert>
+        )}
+
         <Form onSubmit={handleSubmit}>
           {/* ===== Job Title ===== */}
           <Form.Group className="mb-3">
@@ -107,7 +164,7 @@ export default function JobPostModal({ show, onHide, onPosted }) {
               label="Remote work"
               checked={form.is_remote}
               onChange={(e) =>
-                setForm({ ...form, is_remote: e.target.checked })
+                setForm({ ...form, is_remote: e.target.checked, location: "" })
               }
             />
           </Form.Group>
@@ -115,13 +172,19 @@ export default function JobPostModal({ show, onHide, onPosted }) {
           {/* ===== Location ===== */}
           {!form.is_remote && (
             <Form.Group className="mb-3">
-              <Form.Label>Location</Form.Label>
+              <Form.Label>
+                Location <span className="text-danger">*</span>
+              </Form.Label>
               <Form.Control
                 type="text"
-                placeholder="e.g. Kuala Lumpur"
+                placeholder="e.g. Kuala Lumpur, Selangor, Penang"
                 value={form.location}
                 onChange={(e) => setForm({ ...form, location: e.target.value })}
+                required={!form.is_remote}
               />
+              <Form.Text className="text-muted">
+                Enter a Malaysian state or territory (e.g., Selangor, Penang, Johor)
+              </Form.Text>
             </Form.Group>
           )}
 
@@ -140,7 +203,7 @@ export default function JobPostModal({ show, onHide, onPosted }) {
 
           {/* ===== Buttons ===== */}
           <div className="d-flex gap-2">
-            <Button variant="secondary" onClick={onHide}>
+            <Button variant="secondary" onClick={onHide} disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" variant="primary" disabled={loading}>
