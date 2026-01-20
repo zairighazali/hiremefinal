@@ -7,7 +7,7 @@ export default function Footer() {
         <Row className="gy-3">
           {/* Brand */}
           <Col md={4}>
-            <h5 className="mb-2">HireME!</h5>
+            <h5 className="mb-2">LokalJOB</h5>
             <p className="text-secondary small mb-0">
               Search . Connect . Hire .
             </p>
@@ -52,7 +52,7 @@ export default function Footer() {
           {/* Copyright */}
           <Col md={4} className="text-md-end">
             <p className="small text-secondary mb-0">
-              © {new Date().getFullYear()} HireME!. All rights reserved. Powered by{" "}
+              © {new Date().getFullYear()} LokalJOB. All rights reserved. Powered by{" "}
               <a
                 href="https://404found.studio"
                 target="_blank"

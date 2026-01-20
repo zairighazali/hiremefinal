@@ -19,7 +19,7 @@ export default function AppNavbar() {
   return (
     <Navbar bg="dark" variant="dark" expand="lg" expanded={expanded}>
       <Container>
-        <Navbar.Brand as={Link} to="/" onClick={handleLinkClick}>HireMe</Navbar.Brand>
+        <Navbar.Brand as={Link} to="/" onClick={handleLinkClick}>LokalJOB</Navbar.Brand>
 
         <Navbar.Toggle onClick={() => setExpanded(prev => !prev)} />
         <Navbar.Collapse>
