@@ -9,6 +9,7 @@ import PaymentPage from "./pages/PaymentPage";
 import ProfilePage from "./pages/ProfilePage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import About from "./pages/About";
 import ProtectedRoute from "./components/ProtectedRoute";
 import StripeOnboardingPage from "./pages/StripeOnboardingPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -49,6 +50,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/jobs" element={<JobsPage />} />
+          <Route path="/about" element={<About />} />
          
           <Route
             path="/messages/:conversationId?"

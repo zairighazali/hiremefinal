@@ -56,7 +56,7 @@ export default function PrivacyPolicy() {
       <h2>Contact Us</h2>
       <p>
         If you have any questions or concerns about our privacy practices, you can
-        contact us at: <a href="mailto:privacy@yourdomain.com">privacy@yourdomain.com</a>
+        contact us at: <a href="mailto:mohdzairighazali@yahoo.com">privacy@lokaljob.com</a>
       </p>
 
       <p>
