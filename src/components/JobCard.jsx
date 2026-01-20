@@ -51,6 +51,18 @@ export default function JobCard({ job, onUpdated, onDeleted }) {
   const handleEdit = async () => {
     if (!confirm("Save changes to this job?")) return;
 
+    // ✅ Validate payment is mandatory
+    if (!payment || payment.toString().trim() === "") {
+      setError("Payment amount is required");
+      return;
+    }
+
+    const paymentValue = Number(payment);
+    if (isNaN(paymentValue) || paymentValue <= 0) {
+      setError("Payment must be a number greater than 0");
+      return;
+    }
+
     // ✅ Validate remote or location
     if (!isRemote && !location.trim()) {
       setError("Please specify a location or select remote work");
@@ -360,13 +372,21 @@ export default function JobCard({ job, onUpdated, onDeleted }) {
             )}
 
             <Form.Group className="mb-3">
-              <Form.Label>Payment (RM)</Form.Label>
+              <Form.Label>
+                Payment (RM) <span className="text-danger">*</span>
+              </Form.Label>
               <Form.Control
                 type="number"
                 value={payment}
                 onChange={(e) => setPayment(e.target.value)}
                 placeholder="e.g., 1000"
+                min="1"
+                step="0.01"
+                required
               />
+              <Form.Text className="text-muted">
+                Enter the payment amount in Malaysian Ringgit (RM)
+              </Form.Text>
             </Form.Group>
           </Form>
         </Modal.Body>

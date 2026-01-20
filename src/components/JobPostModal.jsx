@@ -62,15 +62,18 @@ export default function JobPostModal({ show, onHide, onPosted }) {
       }
     }
 
-    // ✅ Payment validation
-    if (form.payment) {
-      const paymentValue = Number(form.payment);
+    // ✅ Payment validation - MANDATORY
+    if (!form.payment || form.payment.trim() === "") {
+      setLoading(false);
+      setError("Payment amount is required");
+      return;
+    }
 
-      if (isNaN(paymentValue) || paymentValue <= 0) {
-        setLoading(false);
-        setError("Payment must be a number greater than 0");
-        return;
-      }
+    const paymentValue = Number(form.payment);
+    if (isNaN(paymentValue) || paymentValue <= 0) {
+      setLoading(false);
+      setError("Payment must be a number greater than 0");
+      return;
     }
 
     try {
@@ -190,7 +193,9 @@ export default function JobPostModal({ show, onHide, onPosted }) {
 
           {/* ===== Payment ===== */}
           <Form.Group className="mb-3">
-            <Form.Label>Payment (RM)</Form.Label>
+            <Form.Label>
+              Payment (RM) <span className="text-danger">*</span>
+            </Form.Label>
             <Form.Control
               type="number"
               placeholder="e.g. 500"
@@ -198,7 +203,11 @@ export default function JobPostModal({ show, onHide, onPosted }) {
               min="1"
               step="0.01"
               onChange={(e) => setForm({ ...form, payment: e.target.value })}
+              required
             />
+            <Form.Text className="text-muted">
+              Enter the payment amount in Malaysian Ringgit (RM)
+            </Form.Text>
           </Form.Group>
 
           {/* ===== Buttons ===== */}
