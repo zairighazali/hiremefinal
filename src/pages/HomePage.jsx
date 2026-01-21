@@ -81,17 +81,31 @@ export default function HomePage() {
   return (
     <>
       {/* ===== Carousel ===== */}
-      <Carousel interval={3000} pause={false}>
-        {banners.map((img, index) => (
-          <Carousel.Item key={index}>
-            <img
-              className="d-block w-100"
-              src={img}
-              alt={`Banner ${index + 1}`}
-            />
-          </Carousel.Item>
-        ))}
-      </Carousel>
+       <Carousel interval={3000} pause={false} className="responsive-carousel">
+      {banners.map((img, index) => (
+        <Carousel.Item key={index}>
+          <img
+            className="d-block w-100 carousel-img"
+            src={img}
+            alt={`Banner ${index + 1}`}
+          />
+        </Carousel.Item>
+      ))}
+    </Carousel>
+
+
+      <style jsx>{`
+        @media (min-width: 768px) {
+          .carousel-container img {
+            height: 400px; /* desktop height */
+          }
+        }
+        @media (min-width: 1200px) {
+          .carousel-container img {
+            height: 500px; /* large desktop */
+          }
+        }
+      `}</style>
 
       {/* ===== Hero + Search ===== */}
       <Container className="text-center text-black mt-4">
