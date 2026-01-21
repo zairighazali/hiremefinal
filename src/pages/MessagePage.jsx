@@ -31,6 +31,7 @@ export default function MessagePage() {
   const [notifications, setNotifications] = useState([]);
   const [typingUsers, setTypingUsers] = useState({});
   const [onlineUsers, setOnlineUsers] = useState({});
+  const [showConversations, setShowConversations] = useState(true);
   
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -44,13 +45,11 @@ export default function MessagePage() {
   useEffect(() => {
     if (!user?.uid) return;
 
-    // Set online when component mounts
     authFetch("/api/chats/online", {
       method: "POST",
       body: JSON.stringify({ isOnline: true }),
     }).catch(console.error);
 
-    // Set offline when component unmounts
     return () => {
       authFetch("/api/chats/online", {
         method: "POST",
@@ -96,7 +95,6 @@ export default function MessagePage() {
           }
         ]);
 
-        // Auto-dismiss after 5 seconds
         setTimeout(() => {
           setNotifications(prev => prev.filter(n => n.id !== snapshot.key));
         }, 5000);
@@ -136,7 +134,6 @@ export default function MessagePage() {
     const db = getDatabase();
     const messagesRef = ref(db, `messages/${activeConv.conversation_id}`);
     
-    // Listen for real-time updates
     const unsubscribe = onValue(messagesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -157,7 +154,6 @@ export default function MessagePage() {
       console.error("Firebase messages listener error:", error);
     });
 
-    // Mark as read when opening conversation
     markAsRead(activeConv.conversation_id);
 
     return () => {
@@ -175,13 +171,12 @@ export default function MessagePage() {
     const unsubscribe = onValue(typingRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        // Filter out current user and expired typing indicators
         const now = Date.now();
         const activeTypers = Object.entries(data)
           .filter(([uid, info]) => {
             return uid !== user.uid && 
                    info?.isTyping && 
-                   (now - (info.timestamp || 0)) < 3000; // 3 second expiry
+                   (now - (info.timestamp || 0)) < 3000;
           })
           .map(([uid]) => uid);
         
@@ -240,6 +235,7 @@ export default function MessagePage() {
   const openConversation = async (conv) => {
     setActiveConv(conv);
     setLoading(true);
+    setShowConversations(false); // Hide conversation list on mobile when opening chat
     
     try {
       await markAsRead(conv.conversation_id);
@@ -265,18 +261,15 @@ export default function MessagePage() {
   const handleTyping = () => {
     if (!activeConv) return;
 
-    // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Send typing started
     authFetch(`/api/chats/${activeConv.conversation_id}/typing`, {
       method: "POST",
       body: JSON.stringify({ isTyping: true }),
     }).catch(console.error);
 
-    // Set timeout to send typing stopped
     typingTimeoutRef.current = setTimeout(() => {
       authFetch(`/api/chats/${activeConv.conversation_id}/typing`, {
         method: "POST",
@@ -310,12 +303,9 @@ export default function MessagePage() {
         throw new Error(error.message || "Failed to send message");
       }
 
-      // Stop typing indicator
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-
-      // Message will appear via Firebase listener
     } catch (err) {
       console.error("Failed to send message:", err);
       alert("Failed to send message: " + err.message);
@@ -330,6 +320,12 @@ export default function MessagePage() {
     setNotifications(prev => prev.filter(n => n.id !== notifId));
   };
 
+  // Back to conversations (mobile)
+  const handleBackToConversations = () => {
+    setShowConversations(true);
+    setActiveConv(null);
+  };
+
   // Get total unread count
   const totalUnread = Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
 
@@ -342,10 +338,18 @@ export default function MessagePage() {
     typingUsers[activeConv.conversation_id];
 
   return (
-    <Container fluid className="mt-4" style={{ height: "85vh" }}>
+    <Container fluid className="px-0 px-md-3 py-2 py-md-3" style={{ minHeight: "500px" }}>
       {/* Notification Alerts */}
       {notifications.length > 0 && (
-        <div style={{ position: "fixed", top: 70, right: 20, zIndex: 9999, maxWidth: 400 }}>
+        <div style={{ 
+          position: "fixed", 
+          top: 70, 
+          right: 10, 
+          left: 10,
+          zIndex: 9999, 
+          maxWidth: 400,
+          marginLeft: "auto",
+        }}>
           {notifications.slice(0, 3).map((notif) => (
             <Alert
               key={notif.id}
@@ -367,10 +371,14 @@ export default function MessagePage() {
         </div>
       )}
 
-      <Row className="g-3 h-100">
+      <Row className="g-0 g-md-3 mx-0" style={{ height: "calc(100vh - 200px)", minHeight: "500px" }}>
         {/* Conversations list */}
-        <Col md={4} className="h-100">
-          <Card className="h-100 d-flex flex-column">
+        <Col 
+          xs={12} 
+          md={4} 
+          className={`h-100 ${showConversations ? 'd-block' : 'd-none d-md-block'}`}
+        >
+          <Card className="h-100 d-flex flex-column border-0 border-md rounded-0 rounded-md">
             <Card.Header className="d-flex justify-content-between align-items-center">
               <span>
                 Conversations
@@ -435,9 +443,9 @@ export default function MessagePage() {
                           />
                         )}
                       </div>
-                      <div className="flex-grow-1">
+                      <div className="flex-grow-1 overflow-hidden">
                         <div className="d-flex justify-content-between align-items-center">
-                          <div className="fw-bold">
+                          <div className="fw-bold text-truncate">
                             {conv.other_user_name || "Unknown User"}
                           </div>
                           {unreadCount > 0 && (
@@ -456,10 +464,25 @@ export default function MessagePage() {
         </Col>
 
         {/* Active conversation */}
-        <Col md={8} className="h-100">
+        <Col 
+          xs={12} 
+          md={8} 
+          className={`h-100 ${!showConversations ? 'd-block' : 'd-none d-md-block'}`}
+        >
           {activeConv ? (
-            <Card className="h-100 d-flex flex-column">
+            <Card className="h-100 d-flex flex-column border-0 border-md rounded-0 rounded-md">
               <Card.Header className="d-flex align-items-center gap-2">
+                {/* Back button for mobile */}
+                <Button
+                  variant="link"
+                  className="d-md-none p-0 text-decoration-none"
+                  onClick={handleBackToConversations}
+                >
+                  <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                    <path fillRule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                  </svg>
+                </Button>
+                
                 <div style={{ position: "relative" }}>
                   <img
                     src={
@@ -486,8 +509,8 @@ export default function MessagePage() {
                     />
                   )}
                 </div>
-                <div>
-                  <div className="fw-bold">
+                <div className="flex-grow-1 overflow-hidden">
+                  <div className="fw-bold text-truncate">
                     {activeConv.other_user_name || "Unknown User"}
                   </div>
                   <small className="text-muted">
@@ -496,7 +519,7 @@ export default function MessagePage() {
                 </div>
               </Card.Header>
 
-              <Card.Body className="flex-grow-1 overflow-auto">
+              <Card.Body className="flex-grow-1 overflow-auto p-2 p-md-3">
                 {loading ? (
                   <div className="text-center py-4">
                     <Spinner animation="border" />
@@ -524,7 +547,10 @@ export default function MessagePage() {
                                 ? "bg-primary text-white"
                                 : "bg-light text-dark"
                             }`}
-                            style={{ maxWidth: "70%" }}
+                            style={{ 
+                              maxWidth: "85%",
+                              wordBreak: "break-word"
+                            }}
                           >
                             <div>{m.content}</div>
                             <small
@@ -554,7 +580,7 @@ export default function MessagePage() {
                 <div ref={messagesEndRef} />
               </Card.Body>
 
-              <Card.Footer>
+              <Card.Footer className="p-2 p-md-3">
                 <Form onSubmit={sendMessage} className="d-flex gap-2">
                   <Form.Control
                     value={text}
@@ -564,6 +590,7 @@ export default function MessagePage() {
                     }}
                     placeholder="Type a message..."
                     disabled={sending}
+                    className="flex-grow-1"
                   />
                   <Button 
                     type="submit" 
@@ -575,7 +602,7 @@ export default function MessagePage() {
               </Card.Footer>
             </Card>
           ) : (
-            <Card className="h-100 d-flex align-items-center justify-content-center">
+            <Card className="h-100 d-none d-md-flex align-items-center justify-content-center border-0 border-md rounded-0 rounded-md">
               <p className="text-muted">
                 Select a conversation to start chatting
               </p>

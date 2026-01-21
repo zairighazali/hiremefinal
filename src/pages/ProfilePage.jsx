@@ -163,7 +163,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <Container className="py-5">
+      <Container className="py-5" style={{ minHeight: "60vh" }}>
         <div className="text-center">
           <Spinner animation="border" />
           <p className="mt-2">Loading profile...</p>
@@ -173,7 +173,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <Container className="pt-5 mt-4">
+    <Container className="py-4" style={{ minHeight: "60vh" }}>
       <Row className="g-4">
         {/* LEFT - Profile Card */}
         <Col md={5}>

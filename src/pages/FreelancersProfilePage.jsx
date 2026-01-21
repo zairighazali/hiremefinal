@@ -109,7 +109,7 @@ export default function FreelancerProfilePage() {
 
   if (loading) {
     return (
-      <Container className="py-5">
+      <Container className="py-5" style={{ minHeight: "60vh" }}>
         <div className="text-center">
           <Spinner animation="border" />
           <p className="mt-2">Loading profile...</p>
@@ -120,7 +120,7 @@ export default function FreelancerProfilePage() {
 
   if (!profile) {
     return (
-      <Container className="py-5">
+      <Container className="py-5" style={{ minHeight: "60vh" }}>
         <Card className="text-center p-5">
           <h4>Freelancer not found</h4>
           <Button
@@ -143,7 +143,7 @@ export default function FreelancerProfilePage() {
     : [];
 
   return (
-    <Container className="pt-5 mt-4">
+    <Container className="py-4" style={{ minHeight: "60vh" }}>
       <Row className="justify-content-center">
         <Col md={8} lg={6}>
           <Card className="shadow-sm">
