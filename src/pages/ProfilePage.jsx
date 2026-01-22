@@ -215,7 +215,7 @@ export default function ProfilePage() {
               )}
 
               <Button
-                variant="outline-primary"
+                variant="outline-warning"
                 onClick={() => setShowEdit(true)}
                 className="w-100"
               >
@@ -224,7 +224,7 @@ export default function ProfilePage() {
               <Button
                 as={Link}
                 to="/settings/payment"
-                variant="outline-primary"
+                variant="outline-warning"
                 className="w-100 mt-2"
               >
                 Payment Settings

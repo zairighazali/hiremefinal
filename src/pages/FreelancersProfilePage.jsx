@@ -202,7 +202,7 @@ export default function FreelancerProfilePage() {
               {/* Actions */}
               <div className="d-flex gap-2 justify-content-center mt-4">
                 <Button
-                  variant="primary"
+                  variant="warning"
                   onClick={handleChat}
                   disabled={chatLoading || !user?.uid}
                   title={!user?.uid ? "Login to start chat" : ""}

@@ -59,7 +59,7 @@ export default function FreelancerCard({ freelancer }) {
           as={Link}
           to={`/freelancer/${freelancer.uid}`}
           size="sm"
-          variant="outline-primary"
+          variant="outline-warning"
           className="px-3"
         >
           View Profile

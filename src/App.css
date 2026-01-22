@@ -215,3 +215,14 @@
     font-size: 1.25rem;
   }
 }
+
+/* Active NavLink Indicator */
+.active-navlink {
+  color: #ffc107 !important;
+  font-weight: 600;
+  border-bottom: 3px solid #ffc107;
+}
+
+.active-navlink:hover {
+  color: #ffca2c !important;
+}
