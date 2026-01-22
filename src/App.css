@@ -83,21 +83,122 @@
   50% { border-color: transparent }
 }
 
-
-.responsive-carousel {
-  max-width: 1200px; 
-  margin: 0 auto;    
-}
-
+/* Carousel full width styles */
 .carousel-img {
   width: 100%;
-  height: 250px;      
+  height: 400px;      
   object-fit: cover;   
+}
+
+/* Hero overlay styles */
+.hero-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  width: 90%;
+  max-width: 800px;
+  text-align: center;
+  padding: 0 15px;
+}
+
+.hero-title {
+  font-weight: bold;
+  color: white;
+  margin-bottom: 1rem;
+  font-size: 1.8rem;
+  line-height: 1.2;
+}
+
+.hero-subtitle {
+  color: white;
+  opacity: 0.95;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+}
+
+.search-wrapper {
+  position: relative;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.hero-search-input {
+  padding: 14px 70px 14px 16px !important;
+  font-size: 15px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+  width: 100%;
+}
+
+.hero-search-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1dbf73;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.hero-search-btn:hover {
+  background: #19a463;
+}
+
+.hero-example-text {
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
+  color: white;
+  opacity: 0.8;
+}
+
+@media (max-width: 767px) {
+  .carousel-img {
+    height: 300px;
+  }
+  
+  .hero-title {
+    font-size: 1.4rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+  
+  .hero-search-input {
+    padding: 12px 60px 12px 12px !important;
+    font-size: 14px !important;
+  }
+  
+  .hero-search-btn {
+    padding: 7px 12px;
+    font-size: 13px;
+  }
+  
+  .hero-example-text {
+    font-size: 0.75rem;
+  }
 }
 
 @media (min-width: 768px) {
   .carousel-img {
-    height: 400px;
+    height: 450px;
+  }
+  
+  .hero-title {
+    font-size: 2.5rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.1rem;
   }
 }
 
@@ -105,5 +206,12 @@
   .carousel-img {
     height: 500px;
   }
+  
+  .hero-title {
+    font-size: 3rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.25rem;
+  }
 }
-
