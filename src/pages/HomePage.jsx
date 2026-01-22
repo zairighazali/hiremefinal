@@ -48,7 +48,6 @@ export default function HomePage() {
         data = await res.json();
       }
 
-      // shuffle every fetch
       setFreelancers(shuffleArray(data));
     } catch (err) {
       console.error("Failed to fetch freelancers:", err);
@@ -80,56 +79,83 @@ export default function HomePage() {
   /* ===== Render ===== */
   return (
     <>
-      {/* ===== Carousel ===== */}
-       <Carousel interval={3000} pause={false} className="responsive-carousel">
-      {banners.map((img, index) => (
-        <Carousel.Item key={index}>
-          <img
-            className="d-block w-100 carousel-img"
-            src={img}
-            alt={`Banner ${index + 1}`}
-          />
-        </Carousel.Item>
-      ))}
-    </Carousel>
+      {/* ===== Carousel with Hero Overlay ===== */}
+      <div style={{ position: "relative", width: "100%", margin: 0, padding: 0 }}>
+        <Carousel interval={3000} pause={false} style={{ width: "100%" }}>
+          {banners.map((img, index) => (
+            <Carousel.Item key={index}>
+              <img
+                className="d-block w-100 carousel-img"
+                src={img}
+                alt={`Banner ${index + 1}`}
+                style={{ filter: "brightness(0.7)" }}
+              />
+            </Carousel.Item>
+          ))}
+        </Carousel>
 
+        {/* Hero Content Overlay */}
+        <div
+          style={{
+            position: "absolute",
+            top: "70%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 10,
+            width: "90%",
+            maxWidth: "800px",
+            textAlign: "center",
+          }}
+        >
+          <h1 className="fw-bold display-4 text-white mb-3">
+            Hire <span style={{ color: "#F59127" }}>top freelancers</span> in minutes
+          </h1>
 
-      <style jsx>{`
-        @media (min-width: 768px) {
-          .carousel-container img {
-            height: 400px; /* desktop height */
-          }
-        }
-        @media (min-width: 1200px) {
-          .carousel-container img {
-            height: 500px; /* large desktop */
-          }
-        }
-      `}</style>
+          <p className="fs-5 text-white mb-4" style={{ opacity: 0.95 }}>
+            Search, hire, and work with skilled professionals.
+          </p>
 
-      {/* ===== Hero + Search ===== */}
-      <Container className="text-center text-black mt-4">
-        <h1 className="fw-bold display-5">
-          Hire <span className="text-primary">top freelancers</span> in minutes
-        </h1>
+          <div style={{ position: "relative", maxWidth: "600px", margin: "0 auto" }}>
+            <Form.Control
+              placeholder="Search for any service..."
+              value={search}
+              onChange={handleSearch}
+              style={{
+                padding: "16px 60px 16px 20px",
+                fontSize: "16px",
+                borderRadius: "8px",
+                border: "none",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              }}
+            />
+            <button
+              style={{
+                position: "absolute",
+                right: "8px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "#F59127",
+                border: "none",
+                borderRadius: "6px",
+                padding: "10px 20px",
+                color: "white",
+                fontWeight: "600",
+                cursor: "pointer",
+              }}
+              onClick={() => fetchFreelancers(search)}
+            >
+              Search
+            </button>
+          </div>
 
-        <p className="fs-5 mb-4 opacity-75">
-          Search, hire, and work with skilled professionals.
-        </p>
-
-        <Form.Control
-          placeholder="Search freelancer by skill..."
-          value={search}
-          onChange={handleSearch}
-        />
-
-        <p className="small mt-3 opacity-50">
-          Example searches: Web Developer, Graphic Designer, Musician
-        </p>
-      </Container>
+          <p className="small mt-3 text-white" style={{ opacity: 0.8 }}>
+            Example: Web Developer, Graphic Designer, Musician
+          </p>
+        </div>
+      </div>
 
       {/* ===== Freelancers ===== */}
-      <Container className="mt-4">
+      <Container className="mt-5">
         <h3 className="mb-4">
           {isSearching ? "Search Results" : "Available Freelancers"}
         </h3>
