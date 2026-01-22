@@ -338,7 +338,7 @@ export default function MessagePage() {
     typingUsers[activeConv.conversation_id];
 
   return (
-    <Container fluid className="px-0 px-md-3 py-2 py-md-3" style={{ minHeight: "500px" }}>
+    <Container className="py-3 mb-3" style={{ maxWidth: "1400px" }}>
       {/* Notification Alerts */}
       {notifications.length > 0 && (
         <div style={{ 
@@ -371,16 +371,18 @@ export default function MessagePage() {
         </div>
       )}
 
-      <Row className="g-0 g-md-3 mx-0" style={{ height: "calc(100vh - 200px)", minHeight: "500px" }}>
+      <Row className="g-3" style={{ height: "calc(100vh - 150px)", minHeight: "600px" }}>
         {/* Conversations list */}
         <Col 
           xs={12} 
           md={4} 
+          lg={4}
+          xl={3}
           className={`h-100 ${showConversations ? 'd-block' : 'd-none d-md-block'}`}
         >
-          <Card className="h-100 d-flex flex-column border-0 border-md rounded-0 rounded-md">
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <span>
+          <Card className="h-100 d-flex flex-column shadow-sm">
+            <Card.Header className="d-flex justify-content-between align-items-center bg-white border-bottom">
+              <span className="fw-semibold">
                 Conversations
                 {totalUnread > 0 && (
                   <Badge bg="danger" className="ms-2">
@@ -415,7 +417,7 @@ export default function MessagePage() {
                         activeConv?.conversation_id === conv.conversation_id
                       }
                       onClick={() => openConversation(conv)}
-                      className="d-flex align-items-center gap-2"
+                      className="d-flex align-items-center gap-2 py-3"
                     >
                       <div style={{ position: "relative" }}>
                         <img
@@ -466,12 +468,14 @@ export default function MessagePage() {
         {/* Active conversation */}
         <Col 
           xs={12} 
-          md={8} 
+          md={8}
+          lg={8}
+          xl={9}
           className={`h-100 ${!showConversations ? 'd-block' : 'd-none d-md-block'}`}
         >
           {activeConv ? (
-            <Card className="h-100 d-flex flex-column border-0 border-md rounded-0 rounded-md">
-              <Card.Header className="d-flex align-items-center gap-2">
+            <Card className="h-100 d-flex flex-column shadow-sm">
+              <Card.Header className="d-flex align-items-center gap-2 bg-white border-bottom">
                 {/* Back button for mobile */}
                 <Button
                   variant="link"
@@ -519,7 +523,7 @@ export default function MessagePage() {
                 </div>
               </Card.Header>
 
-              <Card.Body className="flex-grow-1 overflow-auto p-2 p-md-3">
+              <Card.Body className="flex-grow-1 overflow-auto p-3" style={{ backgroundColor: "#f8f9fa" }}>
                 {loading ? (
                   <div className="text-center py-4">
                     <Spinner animation="border" />
@@ -542,14 +546,15 @@ export default function MessagePage() {
                           }`}
                         >
                           <div
-                            className={`px-3 py-2 rounded ${
+                            className={`px-3 py-2 rounded-3 ${
                               isMine
                                 ? "bg-primary text-white"
-                                : "bg-light text-dark"
+                                : "bg-white text-dark"
                             }`}
                             style={{ 
-                              maxWidth: "85%",
-                              wordBreak: "break-word"
+                              maxWidth: "70%",
+                              wordBreak: "break-word",
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.1)"
                             }}
                           >
                             <div>{m.content}</div>
@@ -570,7 +575,7 @@ export default function MessagePage() {
                     })}
                     {isOtherUserTyping && (
                       <div className="mb-3 d-flex justify-content-start">
-                        <div className="px-3 py-2 rounded bg-light text-dark">
+                        <div className="px-3 py-2 rounded-3 bg-white text-dark" style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.1)" }}>
                           <small className="text-muted">typing...</small>
                         </div>
                       </div>
@@ -580,7 +585,7 @@ export default function MessagePage() {
                 <div ref={messagesEndRef} />
               </Card.Body>
 
-              <Card.Footer className="p-2 p-md-3">
+              <Card.Footer className="p-3 bg-white border-top">
                 <Form onSubmit={sendMessage} className="d-flex gap-2">
                   <Form.Control
                     value={text}
@@ -591,10 +596,12 @@ export default function MessagePage() {
                     placeholder="Type a message..."
                     disabled={sending}
                     className="flex-grow-1"
+                    style={{ borderRadius: "20px" }}
                   />
                   <Button 
                     type="submit" 
                     disabled={!text.trim() || sending}
+                    style={{ borderRadius: "20px", minWidth: "80px" }}
                   >
                     {sending ? "..." : "Send"}
                   </Button>
@@ -602,7 +609,7 @@ export default function MessagePage() {
               </Card.Footer>
             </Card>
           ) : (
-            <Card className="h-100 d-none d-md-flex align-items-center justify-content-center border-0 border-md rounded-0 rounded-md">
+            <Card className="h-100 d-none d-md-flex align-items-center justify-content-center shadow-sm">
               <p className="text-muted">
                 Select a conversation to start chatting
               </p>
