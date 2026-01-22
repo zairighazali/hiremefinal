@@ -16,6 +16,7 @@ import { authFetch } from "../services/api";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 
+
 export default function ProfilePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -173,7 +174,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <Container className="py-4" style={{ minHeight: "60vh" }}>
+    <Container className="py-4" style={{ minHeight: "80vh" }}>
       <Row className="g-4">
         {/* LEFT - Profile Card */}
         <Col md={5}>

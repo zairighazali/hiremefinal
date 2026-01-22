@@ -7,7 +7,7 @@ export default function MainLayout({ children }) {
       <AppNavbar />
 
       {/* MAIN CONTENT */}
-      <main className="flex-grow-1 pt-5">
+      <main className="flex-grow-1">
         {children}
       </main>
 

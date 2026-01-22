@@ -57,7 +57,7 @@ export default function Login() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      navigate("/profile");
+      navigate("/");
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {
