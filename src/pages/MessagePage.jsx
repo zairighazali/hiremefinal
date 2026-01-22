@@ -83,10 +83,12 @@ export default function MessagePage() {
 
     const db = getDatabase();
     const notificationsRef = ref(db, `notifications/${user.uid}`);
+    const startTime = Date.now();
     
     const unsubscribe = onChildAdded(notificationsRef, (snapshot) => {
       const notif = snapshot.val();
-      if (notif && !notif.read) {
+      // Only show notifications that are created AFTER the listener started
+      if (notif && !notif.read && notif.timestamp > startTime) {
         setNotifications(prev => [
           ...prev,
           {
