@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getAuth } from "firebase/auth";
 import { Card, Button, Badge, Modal, Form, Spinner, Alert } from "react-bootstrap";
 import JobInterestsModal from "./JobInterestsModal";
@@ -41,6 +41,15 @@ export default function JobCard({ job, onUpdated, onDeleted }) {
   const [isRemote, setIsRemote] = useState(job.is_remote);
   const [location, setLocation] = useState(job.location || "");
   const [payment, setPayment] = useState(job.payment || "");
+
+  // Update form state when job prop changes
+  useEffect(() => {
+    setTitle(job.title);
+    setDescription(job.description);
+    setIsRemote(job.is_remote);
+    setLocation(job.location || "");
+    setPayment(job.payment || "");
+  }, [job]);
 
   // user permissions and job state
   const isOwner = currentUserUid && job.owner_uid === currentUserUid;
@@ -104,7 +113,16 @@ export default function JobCard({ job, onUpdated, onDeleted }) {
       }
 
       const updatedJob = await res.json();
-      onUpdated?.(updatedJob);
+      
+      // ✅ CRITICAL FIX: Preserve owner_uid and has_applied from original job
+      // This ensures the component re-renders correctly after update
+      const completeJob = {
+        ...updatedJob,
+        owner_uid: job.owner_uid, // Preserve from original
+        has_applied: job.has_applied, // Preserve from original
+      };
+      
+      onUpdated?.(completeJob);
       setShowEdit(false);
       alert("Job updated successfully!");
     } catch (err) {
@@ -173,10 +191,13 @@ export default function JobCard({ job, onUpdated, onDeleted }) {
         alert("You have already applied to this job");
       } else {
         alert("Application submitted successfully!");
+        // ✅ Update local state instead of full page reload
+        const updatedJob = {
+          ...job,
+          has_applied: true,
+        };
+        onUpdated?.(updatedJob);
       }
-
-      // Reload to refresh the job card state
-      window.location.reload();
     } catch (err) {
       console.error("Apply to job error:", err);
       setError(err.message);
