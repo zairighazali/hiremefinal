@@ -14,9 +14,9 @@ export default function HomePage() {
 
   /* ===== Banners ===== */
   const banners = [
-    "/landing-banner-1.webp",
+    "/landing-banner-5.png",
     "/landing-banner-2.jpg",
-    "/landing-banner-3.jpg",
+    "/landing-banner-4.JPG",
   ];
 
   /* ===== Utils ===== */
